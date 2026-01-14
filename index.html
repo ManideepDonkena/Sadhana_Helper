@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="कृष्ण Mind Suite - A Krishna-conscious platform for spiritual growth, sadhana tracking, Gita study, and cognitive wellness.">
+    <title>कृष्ण Mind Suite | Spiritual Growth Platform</title>
+    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Common Styles -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/notifications.css">
+    <link rel="stylesheet" href="assets/css/auth.css">
+    
+    <style>
+        /* Krishna-Conscious Design System */
+        :root {
+            --kc-gold: #F5B041;
+            --kc-saffron: #FF7F00;
+            --kc-peacock: #4ECDC4;
+            --kc-lotus-pink: #EC7063;
+            --kc-tulsi-green: #27AE60;
+            --kc-night-sky: #1a1a2e;
+            --kc-deep-blue: #16213e;
+            --kc-purple: #8b5cf6;
+            --kc-magenta: #d946ef;
+            --bg-gradient: linear-gradient(145deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            overflow-y: auto;
+            height: auto;
+            min-height: 100vh;
+            background: var(--bg-gradient);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        /* Top Navigation */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(15, 15, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(245, 176, 65, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 10000;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .nav-logo-icon {
+            font-size: 2rem;
+            animation: gentleFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes gentleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        .nav-logo-text {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--kc-gold);
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .nav-user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--kc-purple), var(--kc-magenta));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            border: 2px solid var(--kc-gold);
+        }
+
+        .nav-user-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .nav-user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .nav-user-level {
+            font-size: 0.75rem;
+            color: var(--kc-gold);
+        }
+
+        .nav-auth-btn {
+            background: linear-gradient(135deg, var(--kc-gold), var(--kc-saffron));
+            color: var(--kc-night-sky);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(245, 176, 65, 0.4);
+        }
+
+        .nav-notification-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+
+        .nav-notification-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .nav-notification-btn .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            border: 2px solid var(--kc-night-sky);
+        }
+
+        /* Hero Section */
+        .hero-section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 100px 20px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-lotus {
+            position: absolute;
+            opacity: 0.08;
+            font-size: 15rem;
+            animation: lotusFloat 15s ease-in-out infinite;
+        }
+
+        .lotus-1 { top: 10%; left: 5%; }
+        .lotus-2 { top: 60%; right: 5%; animation-delay: -5s; }
+        .lotus-3 { bottom: 10%; left: 30%; animation-delay: -10s; font-size: 10rem; }
+
+        @keyframes lotusFloat {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(5deg) scale(1.05); }
+        }
+
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.15;
+            z-index: 0;
+            animation: orbFloat 20s infinite ease-in-out;
+        }
+
+        .orb-gold { width: 500px; height: 500px; background: var(--kc-gold); top: -150px; left: -150px; }
+        .orb-peacock { width: 400px; height: 400px; background: var(--kc-peacock); bottom: 10%; right: -100px; animation-delay: -5s; }
+        .orb-purple { width: 300px; height: 300px; background: var(--kc-purple); top: 40%; left: 20%; animation-delay: -10s; }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(40px, 60px); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(245, 176, 65, 0.1);
+            border: 1px solid rgba(245, 176, 65, 0.3);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            color: var(--kc-gold);
+            margin-bottom: 25px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            margin-bottom: 10px;
+            animation: fadeInUp 1s ease;
+            line-height: 1.2;
+        }
+
+        .hero-title .sanskrit {
+            font-family: 'Noto Sans Devanagari', sans-serif;
+            color: var(--kc-gold);
+            font-size: 4.5rem;
+            display: block;
+        }
+
+        .hero-title .english {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .hero-subtitle {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.75);
+            max-width: 650px;
+            margin: 0 auto 20px;
+            line-height: 1.7;
+            animation: fadeInUp 1.2s ease;
+        }
+
+        .hero-verse {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(217, 70, 239, 0.15));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin: 0 auto 40px;
+            max-width: 600px;
+            animation: fadeInUp 1.4s ease;
+        }
+
+        .hero-verse-text {
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .hero-verse-ref {
+            color: var(--kc-gold);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-auth-section {
+            margin-bottom: 50px;
+            animation: fadeInUp 1.6s ease;
+        }
+
+        .hero-auth-btn {
+            background: linear-gradient(135deg, var(--kc-gold), var(--kc-saffron));
+            color: var(--kc-night-sky);
+            border: none;
+            padding: 18px 40px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 8px 30px rgba(245, 176, 65, 0.3);
+        }
+
+        .hero-auth-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(245, 176, 65, 0.5);
+        }
+
+        .hero-auth-btn small {
+            font-size: 0.75rem;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+
+        .hero-user-welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .hero-user-avatar-large {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--kc-purple), var(--kc-magenta));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            border: 3px solid var(--kc-gold);
+            box-shadow: 0 5px 25px rgba(139, 92, 246, 0.4);
+        }
+
+        .hero-user-avatar-large img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .hero-user-greeting {
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .hero-user-greeting .name {
+            color: var(--kc-gold);
+            font-weight: 700;
+        }
+
+        .hero-user-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 10px;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .hero-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--kc-gold);
+        }
+
+        .hero-stat-label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+        }
+
+        /* Module Cards */
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            max-width: 1200px;
+            width: 100%;
+            animation: fadeInUp 1.8s ease;
+        }
+
+        .module-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 30px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .module-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .module-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(245, 176, 65, 0.3);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .module-card-workspace::before { background: linear-gradient(90deg, var(--kc-purple), var(--kc-magenta)); }
+        .module-card-sadhana::before { background: var(--kc-saffron); }
+        .module-card-gita::before { background: var(--kc-purple); }
+        .module-card-lab::before { background: var(--kc-peacock); }
+
+        .module-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .module-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .module-name .sanskrit {
+            color: var(--kc-gold);
+        }
+
+        .module-desc {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .module-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .module-progress {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .module-progress-bar {
+            width: 60px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .module-progress-fill {
+            height: 100%;
+            background: var(--kc-gold);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .module-progress-text {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .module-enter {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 100px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(78, 205, 196, 0.1);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            color: var(--kc-peacock);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 2.8rem;
+            color: #fff;
+            margin-bottom: 15px;
+        }
+
+        .section-title .highlight {
+            color: var(--kc-gold);
+        }
+
+        .section-subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 35px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(245, 176, 65, 0.2);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+
+        .feature-icon-gold { background: linear-gradient(135deg, rgba(245, 176, 65, 0.2), rgba(255, 127, 0, 0.2)); }
+        .feature-icon-purple { background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(217, 70, 239, 0.2)); }
+        .feature-icon-peacock { background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(39, 174, 96, 0.2)); }
+        .feature-icon-pink { background: linear-gradient(135deg, rgba(236, 112, 99, 0.2), rgba(245, 176, 65, 0.2)); }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        .feature-desc {
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Verse Section */
+        .verse-section {
+            padding: 80px 20px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(217, 70, 239, 0.05));
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
+            border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .verse-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .verse-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(245, 176, 65, 0.1);
+            border: 1px solid rgba(245, 176, 65, 0.3);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            color: var(--kc-gold);
+            margin-bottom: 30px;
+        }
+
+        .verse-sanskrit {
+            font-size: 1.8rem;
+            color: var(--kc-gold);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .verse-translation {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.7;
+            font-style: italic;
+            margin-bottom: 25px;
+        }
+
+        .verse-reference {
+            font-size: 1rem;
+            color: var(--kc-peacock);
+            font-weight: 600;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 50px 20px;
+            color: rgba(255, 255, 255, 0.5);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .footer-logo {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        .footer-links {
+            margin: 20px 0;
+        }
+
+        .footer-link {
+            color: var(--kc-gold);
+            text-decoration: none;
+            margin: 0 15px;
+            transition: opacity 0.3s;
+        }
+
+        .footer-link:hover {
+            opacity: 0.8;
+        }
+
+        .footer-tagline {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .top-nav { padding: 0 15px; }
+            .nav-user-details { display: none; }
+            .hero-title { font-size: 2.5rem; }
+            .hero-title .sanskrit { font-size: 3rem; }
+            .hero-subtitle { font-size: 1.1rem; }
+            .module-grid { grid-template-columns: 1fr; }
+            .section-title { font-size: 2rem; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .verse-sanskrit { font-size: 1.3rem; }
+            .verse-translation { font-size: 1.1rem; }
+            .hero-user-stats { flex-wrap: wrap; justify-content: center; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <a href="#" class="nav-logo">
+            <span class="nav-logo-icon">🪷</span>
+            <span class="nav-logo-text"><span>कृष्ण</span> Mind Suite</span>
+        </a>
+        
+        <div class="nav-right">
+            <button class="nav-notification-btn" onclick="NotificationCenter && NotificationCenter.toggle()" title="Notifications">
+                🔔
+            </button>
+            
+            <div id="nav-auth-area">
+                <button class="nav-auth-btn" onclick="Auth.openAuthModal()">
+                    🙏 Sign In
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-lotus lotus-1">🪷</div>
+        <div class="hero-lotus lotus-2">🪷</div>
+        <div class="hero-lotus lotus-3">🪷</div>
+        <div class="bg-orb orb-gold"></div>
+        <div class="bg-orb orb-peacock"></div>
+        <div class="bg-orb orb-purple"></div>
+
+        <div class="hero-content">
+            <div class="hero-badge">
+                🙏 Hare Krishna • Welcome to Your Spiritual Journey
+            </div>
+            
+            <h1 class="hero-title">
+                <span class="sanskrit">कृष्ण</span>
+                <span class="english">MIND SUITE</span>
+            </h1>
+            
+            <p class="hero-subtitle">
+                A holistic platform for spiritual growth, Krishna consciousness, and cognitive wellness. 
+                Track your sadhana, study Bhagavad Gita, and cultivate your inner garden.
+            </p>
+
+            <div class="hero-verse" id="hero-daily-verse">
+                <p class="hero-verse-text">
+                    "You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions."
+                </p>
+                <span class="hero-verse-ref">— Bhagavad Gita 2.47</span>
+            </div>
+
+            <div class="hero-auth-section" id="hero-auth-section">
+                <button class="hero-auth-btn" onclick="Auth.openAuthModal()">
+                    <span>🔑 Begin Your Journey</span>
+                    <small>Sign in to sync your spiritual progress</small>
+                </button>
+            </div>
+
+            <div class="module-grid">
+                <a href="modules/workspace/workspace.html" class="module-card module-card-workspace">
+                    <span class="module-icon">🙏</span>
+                    <h3 class="module-name"><span class="sanskrit">कृष्ण</span> Workspace</h3>
+                    <p class="module-desc">Your sacred space for daily devotion. Track Sadhana, record insights, and grow in Bhakti.</p>
+                    <div class="module-meta">
+                        <div class="module-progress">
+                            <div class="module-progress-bar">
+                                <div class="module-progress-fill" style="width: 0%" id="workspace-progress"></div>
+                            </div>
+                            <span class="module-progress-text" id="workspace-progress-text">Begin</span>
+                        </div>
+                        <span class="module-enter">Enter →</span>
+                    </div>
+                </a>
+
+                <a href="modules/sadhana/index.html" class="module-card module-card-sadhana">
+                    <span class="module-icon">🪷</span>
+                    <h3 class="module-name">Sādhana Tracker</h3>
+                    <p class="module-desc">Track daily spiritual practices with love. Rituals, reflections, and growth insights.</p>
+                    <div class="module-meta">
+                        <div class="module-progress">
+                            <div class="module-progress-bar">
+                                <div class="module-progress-fill" style="width: 0%" id="sadhana-progress"></div>
+                            </div>
+                            <span class="module-progress-text" id="sadhana-progress-text">Begin</span>
+                        </div>
+                        <span class="module-enter">Enter →</span>
+                    </div>
+                </a>
+
+                <a href="modules/gita/index.html" class="module-card module-card-gita">
+                    <span class="module-icon">📚</span>
+                    <h3 class="module-name">Bhakti Shastri</h3>
+                    <p class="module-desc">Comprehensive Bhagavad Gita course with audio, transcripts, and progress tracking.</p>
+                    <div class="module-meta">
+                        <div class="module-progress">
+                            <div class="module-progress-bar">
+                                <div class="module-progress-fill" style="width: 0%" id="gita-progress"></div>
+                            </div>
+                            <span class="module-progress-text" id="gita-progress-text">Begin</span>
+                        </div>
+                        <span class="module-enter">Enter →</span>
+                    </div>
+                </a>
+
+                <a href="modules/lab/index.html" class="module-card module-card-lab">
+                    <span class="module-icon">🧪</span>
+                    <h3 class="module-name">Mind Laboratory</h3>
+                    <p class="module-desc">Cognitive diagnostics to understand your mind. Attention, reaction, and stability tests.</p>
+                    <div class="module-meta">
+                        <div class="module-progress">
+                            <div class="module-progress-bar">
+                                <div class="module-progress-fill" style="width: 0%" id="lab-progress"></div>
+                            </div>
+                            <span class="module-progress-text" id="lab-progress-text">Begin</span>
+                        </div>
+                        <span class="module-enter">Enter →</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="section-header">
+            <div class="section-badge">✨ Platform Features</div>
+            <h2 class="section-title">Grow in <span class="highlight">Krishna Consciousness</span></h2>
+            <p class="section-subtitle">Four integrated modules working together for your complete spiritual and mental well-being.</p>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon feature-icon-gold">🔥</div>
+                <h3 class="feature-title">Tapasya Streaks</h3>
+                <p class="feature-desc">Build consistent spiritual practice with daily streak tracking. Receive encouraging notifications and Gita wisdom.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon feature-icon-purple">📿</div>
+                <h3 class="feature-title">Bhakti Points</h3>
+                <p class="feature-desc">Earn points for spiritual activity. Progress through Ashram Levels from Shravana to Atma-nivedana.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon feature-icon-peacock">☁️</div>
+                <h3 class="feature-title">Cloud Sync</h3>
+                <p class="feature-desc">All your spiritual progress synced securely. Continue your journey seamlessly across any device.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon feature-icon-pink">🔔</div>
+                <h3 class="feature-title">KC Notifications</h3>
+                <p class="feature-desc">Daily Gita verses, sadhana reminders, and spiritual encouragement at your preferred times.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon feature-icon-gold">📊</div>
+                <h3 class="feature-title">Progress Insights</h3>
+                <p class="feature-desc">Visualize your spiritual growth. Weekly reports, pattern analysis, and personalized recommendations.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon feature-icon-purple">🎯</div>
+                <h3 class="feature-title">Personalized Goals</h3>
+                <p class="feature-desc">Set practice targets based on your spiritual level. The system adapts to your unique journey.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Daily Verse Section -->
+    <section class="verse-section">
+        <div class="verse-container">
+            <div class="verse-badge">📖 Today's Gita Wisdom</div>
+            <p class="verse-sanskrit" id="daily-verse-sanskrit">
+                कर्मण्येवाधिकारस्ते मा फलेषु कदाचन
+            </p>
+            <p class="verse-translation" id="daily-verse-translation">
+                "You have a right to perform your prescribed duties, but you are not entitled to the fruits of your actions."
+            </p>
+            <span class="verse-reference" id="daily-verse-ref">— Bhagavad Gita 2.47 (Karma Yoga)</span>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-logo">🪷</div>
+        <p>कृष्ण Mind Suite — Your Spiritual Companion</p>
+        <div class="footer-links">
+            <a href="docs/README.md" class="footer-link">Documentation</a>
+            <a href="docs/HOLISTIC_INTEGRATION_PLAN.md" class="footer-link">Roadmap</a>
+            <a href="#" class="footer-link">Privacy</a>
+        </div>
+        <p class="footer-tagline">🙏 Hare Krishna Hare Krishna Krishna Krishna Hare Hare<br>Hare Rama Hare Rama Rama Rama Hare Hare</p>
+        <p style="margin-top: 20px;">© 2025 Mind Suite. Made with devotion.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="assets/js/common.js"></script>
+    <script src="assets/js/firebase-config.js"></script>
+    <script src="assets/js/kc-verses.js"></script>
+    <script src="assets/js/notifications.js"></script>
+    <script src="assets/js/notification-service.js"></script>
+    <script src="assets/js/profile-manager.js"></script>
+    <script src="assets/js/auth.js"></script>
+    
+    <script>
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Firebase first
+            await FirebaseManager.init();
+            
+            // Re-initialize Auth to ensure it picks up FirebaseManager
+            if (typeof Auth !== 'undefined' && Auth.init) {
+                await Auth.init();
+            }
+            
+            updateDailyVerse();
+            loadModuleProgress();
+        });
+
+        // Daily Verse Display
+        function updateDailyVerse() {
+            if (typeof getDailyVerse === 'function') {
+                const verse = getDailyVerse();
+                if (verse) {
+                    const heroVerse = document.getElementById('hero-daily-verse');
+                    if (heroVerse) {
+                        heroVerse.innerHTML = '<p class="hero-verse-text">"' + verse.text + '"</p><span class="hero-verse-ref">— ' + verse.ref + '</span>';
+                    }
+                    
+                    const sanskritEl = document.getElementById('daily-verse-sanskrit');
+                    const translationEl = document.getElementById('daily-verse-translation');
+                    const refEl = document.getElementById('daily-verse-ref');
+                    
+                    if (verse.sanskrit && sanskritEl) sanskritEl.textContent = verse.sanskrit;
+                    if (translationEl) translationEl.textContent = '"' + verse.text + '"';
+                    if (refEl) refEl.textContent = '— ' + verse.ref + ' (' + verse.topic + ')';
+                }
+            }
+        }
+
+        // Auth State Handler
+        window.addEventListener('authStateChanged', async (e) => {
+            const user = e.detail.user;
+            updateNavAuth(user);
+            updateHeroAuth(user);
+            
+            if (user) {
+                await UserProfile.loadProfile();
+                
+                // Only show profile setup if truly needed - check both systems
+                const profileComplete = UserProfile.isProfileComplete();
+                const setupNeeded = typeof ProfileManager !== 'undefined' && ProfileManager.isSetupNeeded();
+                
+                if (!profileComplete && setupNeeded) {
+                    // Check if user already has display name (from Google auth, etc)
+                    const hasBasicProfile = user.displayName && user.displayName.trim();
+                    
+                    if (!hasBasicProfile) {
+                        setTimeout(() => {
+                            ProfileManager.open((profile, prefs) => {
+                                console.log('Profile setup complete:', profile);
+                                loadModuleProgress();
+                            });
+                        }, 1000);
+                    } else {
+                        // User has basic profile from auth, mark as complete
+                        localStorage.setItem('kc_mindsuite_profile', JSON.stringify({
+                            displayName: user.displayName,
+                            profileComplete: true
+                        }));
+                    }
+                }
+                
+                loadModuleProgress();
+            }
+        });
+
+        // Update Navigation Auth
+        function updateNavAuth(user) {
+            const navAuthArea = document.getElementById('nav-auth-area');
+            if (!navAuthArea) return;
+            
+            if (user) {
+                const displayName = user.displayName || 'Seeker';
+                const photoURL = user.photoURL;
+                const level = SpiritualLevels && SpiritualLevels.getLevelForPoints ? SpiritualLevels.getLevelForPoints(0) : { name: 'Shravana' };
+                
+                navAuthArea.innerHTML = '<div class="nav-user-info" onclick="showUserMenu()" style="cursor: pointer;"><div class="nav-user-avatar">' + (photoURL ? '<img src="' + photoURL + '" alt="' + displayName + '">' : displayName.charAt(0).toUpperCase()) + '</div><div class="nav-user-details"><span class="nav-user-name">' + (Sanitizer ? Sanitizer.escapeHTML(displayName) : displayName) + '</span><span class="nav-user-level">📿 ' + level.name + '</span></div></div>';
+            } else {
+                navAuthArea.innerHTML = '<button class="nav-auth-btn" onclick="Auth.openAuthModal()">🙏 Sign In</button>';
+            }
+        }
+
+        // Update Hero Auth
+        async function updateHeroAuth(user) {
+            const heroAuthSection = document.getElementById('hero-auth-section');
+            if (!heroAuthSection) return;
+            
+            if (user) {
+                const displayName = user.displayName || 'Seeker';
+                const photoURL = user.photoURL;
+                
+                let stats = { totalBhaktiPoints: 0, currentStreak: 0 };
+                if (typeof UserProfile !== 'undefined') {
+                    stats = await UserProfile.loadStats() || stats;
+                }
+                
+                const level = SpiritualLevels && SpiritualLevels.getLevelForPoints ? SpiritualLevels.getLevelForPoints(stats.totalBhaktiPoints) : { name: 'Shravana' };
+                
+                heroAuthSection.innerHTML = '<div class="hero-user-welcome"><div class="hero-user-avatar-large">' + (photoURL ? '<img src="' + photoURL + '" alt="' + displayName + '">' : '🙏') + '</div><div class="hero-user-greeting">Hare Krishna, <span class="name">' + (Sanitizer ? Sanitizer.escapeHTML(displayName) : displayName) + '</span>!</div><div class="hero-user-stats"><div class="hero-stat"><div class="hero-stat-value">' + (stats.totalBhaktiPoints || 0) + '</div><div class="hero-stat-label">Bhakti Points</div></div><div class="hero-stat"><div class="hero-stat-value">' + (stats.currentStreak || 0) + '</div><div class="hero-stat-label">Day Streak</div></div><div class="hero-stat"><div class="hero-stat-value">' + level.name + '</div><div class="hero-stat-label">Ashram Level</div></div></div></div>';
+            } else {
+                heroAuthSection.innerHTML = '<button class="hero-auth-btn" onclick="Auth.openAuthModal()"><span>🔑 Begin Your Journey</span><small>Sign in to sync your spiritual progress</small></button>';
+            }
+        }
+
+        // Load Module Progress
+        async function loadModuleProgress() {
+            const user = FirebaseManager && FirebaseManager.getUser ? FirebaseManager.getUser() : null;
+            
+            if (user && typeof ModuleData !== 'undefined') {
+                const workspaceData = await ModuleData.get('workspace');
+                if (workspaceData) {
+                    const progress = Math.min(100, (workspaceData.bhaktiPoints || 0) / 10);
+                    updateModuleProgress('workspace', progress, (workspaceData.bhaktiPoints || 0) + ' pts');
+                }
+                
+                const sadhanaData = await ModuleData.get('sadhana');
+                if (sadhanaData && sadhanaData.dailyLogs) {
+                    const days = Object.keys(sadhanaData.dailyLogs).length;
+                    const progress = Math.min(100, days * 3);
+                    updateModuleProgress('sadhana', progress, days + ' days');
+                }
+                
+                const gitaData = await ModuleData.get('gita');
+                if (gitaData) {
+                    const chapters = gitaData.chaptersCompleted || 0;
+                    const progress = Math.min(100, (chapters / 18) * 100);
+                    updateModuleProgress('gita', progress, chapters + '/18 ch');
+                }
+                
+                const labData = await ModuleData.get('lab');
+                if (labData && labData.testResults) {
+                    const tests = labData.testResults.length;
+                    const progress = Math.min(100, tests * 10);
+                    updateModuleProgress('lab', progress, tests + ' tests');
+                }
+            } else {
+                const sadhanaLocal = localStorage.getItem('sadhana_interactive_v5');
+                if (sadhanaLocal) {
+                    try {
+                        const data = JSON.parse(sadhanaLocal);
+                        if (data.dailyLogs) {
+                            const days = Object.keys(data.dailyLogs).length;
+                            const progress = Math.min(100, days * 3);
+                            updateModuleProgress('sadhana', progress, days + ' days');
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+
+        function updateModuleProgress(module, progress, text) {
+            const progressBar = document.getElementById(module + '-progress');
+            const progressText = document.getElementById(module + '-progress-text');
+            
+            if (progressBar) progressBar.style.width = progress + '%';
+            if (progressText) progressText.textContent = text;
+        }
+
+        // User Menu
+        function showUserMenu() {
+            if (confirm('Sign out of Mind Suite?')) {
+                Auth.signOut();
+            }
+        }
+
+        // Welcome Notification
+        if (!localStorage.getItem('kc_visited')) {
+            setTimeout(() => {
+                if (typeof NotificationCenter !== 'undefined') {
+                    NotificationCenter.add({
+                        type: 'INFO',
+                        title: '🙏 Hare Krishna!',
+                        message: 'Welcome to Mind Suite. Begin your spiritual journey today.'
+                    });
+                }
+                localStorage.setItem('kc_visited', 'true');
+            }, 2000);
+        }
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Mind State Laboratory - A suite of interactive diagnostic tools to analyze focus, impulse control, motor stability, and more.">
+    <meta name="keywords"
+        content="mind games, focus test, reaction time, meditation, grounding technique, anxiety relief">
+    <title>Mind State Laboratory | Diagnostic Tools</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <div id="app">
+
+        <!-- Navigation Back -->
+        <a href="index.html" class="nav-back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Back to Home
+        </a>
+
+        <!-- MENU SCREEN -->
+        <div id="menu-screen">
+            <h1>Mind State Lab</h1>
+            <p class="subtitle">Select a diagnostic tool to analyze your mental state</p>
+
+            <div class="grid-container">
+                <div class="test-card" onclick="App.startTest('orb')">
+                    <h3>Focus Orb</h3>
+                    <p>Keep your mouse inside the moving orb. Measures Sustained Attention.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('circle')">
+                    <h3>Zen Circle</h3>
+                    <p>Trace the circle slowly and perfectly. Measures Motor Stability.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('impulse')">
+                    <h3>Don't Click</h3>
+                    <p>Resist the fake triggers. Measures Impulse Control.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('steady')">
+                    <h3>Microscope</h3>
+                    <p>Hold your hand absolutely still. Measures Nervous Tension.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('breath')">
+                    <h3>Breath Sync</h3>
+                    <p>Match your keypresses to the rhythm. Measures Mind-Body Sync.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('vigilance')">
+                    <h3>Vigilance</h3>
+                    <p>React instantly when a light flashes. Measures Alertness.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('grounding')">
+                    <h3>Grounding</h3>
+                    <p>5-4-3-2-1 Anxiety Relief Technique. Calms the mind.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME INTERFACE -->
+        <div id="game-interface">
+            <div class="hud">
+                <div id="hud-timer">30s</div>
+                <button class="btn-quit" onclick="App.returnToMenu()">Quit Test</button>
+            </div>
+
+            <!-- Dynamic Containers -->
+            <div id="test-container"></div>
+            <canvas id="game-canvas-layer"></canvas>
+        </div>
+
+        <!-- RESULTS MODAL -->
+        <div id="result-modal">
+            <div class="result-content">
+                <div class="score-big" id="res-score">85%</div>
+                <div class="score-label" id="res-title">Balanced Mind</div>
+                <p class="score-desc" id="res-desc">Your focus was good, but you had minor lapses.</p>
+                <button class="btn" onclick="App.returnToMenu()">Back to Menu</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js" defer></script>
+</body>
+
+</html>

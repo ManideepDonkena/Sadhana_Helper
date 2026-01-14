@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Sādhana: Interactive Bhakti Journal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Typography & Theming */
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #fafaf9; /* Stone-50 */
+            color: #44403c; /* Stone-700 */
+        }
+        h1, h2, h3, h4, .serif {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        /* Glass Panel */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Interactive Tabs */
+        .pillar-tab {
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            opacity: 0.6;
+            cursor: pointer;
+        }
+        .pillar-tab:hover {
+            opacity: 1;
+            background-color: rgba(255, 247, 237, 0.5); /* orange-50 */
+        }
+        .pillar-tab.active {
+            opacity: 1;
+            border-bottom-color: #f97316; /* orange-500 */
+            background-color: #fff7ed; /* orange-50 */
+            transform: translateY(-2px);
+        }
+        
+        /* Chart Containers */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 300px; /* Fixed height for consistency */
+        }
+
+        /* Garden Grid */
+        .garden-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(2rem, 1fr));
+            gap: 0.4rem;
+        }
+        .garden-cell {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        /* Animations */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        /* Journal Input Focus */
+        .journal-input:focus {
+            border-color: #f97316;
+            background-color: #fff7ed;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+
+        /* Slider Customization */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #f97316;
+            cursor: pointer;
+            margin-top: -8px; 
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e7e5e4;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 antialiased selection:bg-orange-100 selection:text-orange-900">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 glass-panel border-b border-stone-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl animate-pulse">🪷</span>
+                    <span class="serif text-2xl font-semibold text-stone-800 tracking-wide">My Sādhana</span>
+                </div>
+                <div class="hidden md:flex space-x-6">
+                    <button onclick="scrollToSection('philosophy')" class="text-stone-500 hover:text-stone-900 px-3 py-2 text-sm font-medium transition-colors">Wisdom</button>
+                    <button onclick="scrollToSection('dashboard')" class="text-stone-900 bg-orange-100 hover:bg-orange-200 px-5 py-2 text-sm font-bold rounded-full transition-colors border border-orange-200 shadow-sm">My Journal</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative overflow-hidden pt-20 pb-24 bg-gradient-to-b from-orange-50/80 via-white to-stone-50">
+        <!-- Decorative Background Element -->
+        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-[800px] h-[500px] bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
+
+        <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="inline-block px-4 py-1.5 mb-6 text-[10px] font-bold tracking-[0.2em] text-orange-600 uppercase bg-white border border-orange-100 rounded-full shadow-sm">Bhakti Yoga Perspective</div>
+            <h1 class="serif text-5xl md:text-7xl font-medium text-stone-800 mb-6 leading-[1.1]">
+                Discipline is not a whip.<br>
+                <span class="italic text-stone-500">It is an offering of love.</span>
+            </h1>
+            <p class="mt-6 max-w-2xl mx-auto text-xl text-stone-600 leading-relaxed font-light">
+                Discover the 5 pillars of <strong>Sādhana</strong>. Move from harsh force to gentle, consistent devotion.
+            </p>
+            <div class="mt-10 flex justify-center gap-4">
+                <button onclick="scrollToSection('philosophy')" class="group bg-white text-stone-800 border border-stone-300 px-8 py-3 rounded-full hover:border-orange-400 hover:text-orange-600 transition shadow-sm flex items-center">
+                    Explore the Wisdom <span class="ml-2 group-hover:translate-y-1 transition-transform">↓</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- INTERACTIVE PHILOSOPHY SECTION (The 5 Pillars) -->
+    <main id="philosophy" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        
+        <div class="text-center mb-12">
+            <h2 class="serif text-3xl text-stone-800">The 5 Pillars of Gentle Discipline</h2>
+            <p class="text-stone-500 mt-2 italic">Click a pillar to explore its secret.</p>
+        </div>
+
+        <!-- Pillar Navigation Tabs -->
+        <div class="flex flex-wrap justify-center gap-2 md:gap-4 mb-8 border-b border-stone-200 pb-1">
+            <button onclick="switchPillar('identity')" id="tab-identity" class="pillar-tab active px-4 py-3 rounded-t-lg text-sm font-bold uppercase tracking-wider text-stone-600 flex items-center"><span class="mr-2">🧘</span> Identity</button>
+            <button onclick="switchPillar('rhythm')" id="tab-rhythm" class="pillar-tab px-4 py-3 rounded-t-lg text-sm font-bold uppercase tracking-wider text-stone-600 flex items-center"><span class="mr-2">📈</span> Rhythm</button>
+            <button onclick="switchPillar('structure')" id="tab-structure" class="pillar-tab px-4 py-3 rounded-t-lg text-sm font-bold uppercase tracking-wider text-stone-600 flex items-center"><span class="mr-2">🏛️</span> Structure</button>
+            <button onclick="switchPillar('resilience')" id="tab-resilience" class="pillar-tab px-4 py-3 rounded-t-lg text-sm font-bold uppercase tracking-wider text-stone-600 flex items-center"><span class="mr-2">🛡️</span> Resilience</button>
+            <button onclick="switchPillar('devotion')" id="tab-devotion" class="pillar-tab px-4 py-3 rounded-t-lg text-sm font-bold uppercase tracking-wider text-stone-600 flex items-center"><span class="mr-2">🌺</span> Devotion</button>
+        </div>
+
+        <!-- Pillar Content Area (Dynamic) -->
+        <div class="bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden min-h-[500px] flex flex-col md:flex-row transition-all duration-500">
+            
+            <!-- LEFT: Wisdom Text -->
+            <div class="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center bg-stone-50/50">
+                <div id="pillar-content-text">
+                    <!-- Default Content (Identity) -->
+                    <span class="text-orange-500 font-bold tracking-widest text-xs uppercase mb-3 block">Pillar 01</span>
+                    <h3 class="serif text-4xl text-stone-800 mb-6">Identity over Mood</h3>
+                    <p class="text-lg text-stone-600 leading-relaxed mb-6">
+                        Don't say "I will try to chant." Say "I am a chanter."
+                        <br><br>
+                        In spiritual life, we act according to our true self (*svarupa*), not our temporary feelings. When you attach discipline to your identity, you bypass the need for daily willpower.
+                    </p>
+                    <blockquote class="border-l-4 border-orange-300 pl-4 italic text-stone-500 my-4">
+                        "This is who I am becoming, so this is what I do."
+                    </blockquote>
+                </div>
+            </div>
+
+            <!-- RIGHT: Interactive Visual -->
+            <div class="w-full md:w-1/2 bg-white border-l border-stone-100 relative p-8 flex items-center justify-center">
+                
+                <!-- VISUAL 1: Identity Shifter -->
+                <div id="visual-identity" class="pillar-visual w-full max-w-sm text-center">
+                    <div class="bg-stone-50 p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <p class="text-xs font-bold text-stone-400 uppercase mb-4">Mindset Reframing Tool</p>
+                        
+                        <div class="mb-4 text-left">
+                            <label class="text-xs text-stone-500">Action (e.g. Read Gita)</label>
+                            <input type="text" id="sim-action" value="Chant my rounds" class="w-full mt-1 p-2 border border-stone-300 rounded text-stone-700 bg-white">
+                        </div>
+
+                        <div id="identity-result" class="hidden mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg animate-fade-in">
+                            <p class="text-xs text-orange-400 uppercase font-bold mb-1">New Identity</p>
+                            <p class="serif text-xl text-stone-800 italic" id="identity-result-text"></p>
+                        </div>
+
+                        <button onclick="runIdentitySim()" class="w-full bg-stone-800 text-white py-2 rounded shadow-lg hover:bg-stone-700 transition">Transform Mindset</button>
+                    </div>
+                </div>
+
+                <!-- VISUAL 2: Rhythm Chart (Hidden by default) -->
+                <div id="visual-rhythm" class="pillar-visual hidden w-full h-full flex flex-col justify-center">
+                    <div class="text-center mb-4">
+                        <div class="inline-flex bg-stone-100 rounded-lg p-1">
+                            <button onclick="updateRhythmChart('sporadic')" class="px-3 py-1 text-xs rounded-md hover:bg-white hover:shadow-sm transition">Sporadic Passion</button>
+                            <button onclick="updateRhythmChart('steady')" class="px-3 py-1 text-xs rounded-md bg-white shadow-sm font-bold text-emerald-600 transition">Gentle Sādhana</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chartRhythm"></canvas>
+                    </div>
+                    <p class="text-center text-xs text-stone-400 mt-2">"Abhyāsa" means consistent effort over time.</p>
+                </div>
+
+                <!-- VISUAL 3: Structure Safety Net (Hidden) -->
+                <div id="visual-structure" class="pillar-visual hidden w-full max-w-sm">
+                    <div class="text-center">
+                        <p class="text-xs font-bold text-stone-400 uppercase mb-6">Interactive Simulation</p>
+                        
+                        <label class="block text-sm font-bold text-stone-700 mb-2">My Motivation Level Today:</label>
+                        <input type="range" id="motivation-slider" min="0" max="100" value="20" class="w-full mb-6" oninput="updateStructureVisual(this.value)">
+                        
+                        <div class="relative h-40 border-b-4 border-stone-800 flex items-end justify-center space-x-4">
+                            <!-- The Person -->
+                            <div id="struct-person" class="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center text-white text-xl transition-all duration-500 shadow-lg relative z-10" style="margin-bottom: 20px;">
+                                🧘
+                            </div>
+                            
+                            <!-- The Structure (Pillars) -->
+                            <div id="struct-pillars" class="absolute bottom-0 left-0 w-full flex justify-between px-8 transition-opacity duration-500 opacity-100">
+                                <div class="w-4 h-24 bg-stone-300 rounded-t-lg"></div>
+                                <div class="w-4 h-24 bg-stone-300 rounded-t-lg"></div>
+                                <div class="w-4 h-24 bg-stone-300 rounded-t-lg"></div>
+                            </div>
+                            
+                            <!-- Safety Net -->
+                            <div id="struct-net" class="absolute bottom-24 left-8 right-8 h-1 bg-stone-400 border-b border-dashed border-stone-600 transition-opacity duration-500 opacity-100"></div>
+                        </div>
+                        
+                        <p id="struct-msg" class="text-sm font-serif italic mt-4 text-stone-600">Motivation is low. Structure is holding you up.</p>
+                    </div>
+                </div>
+
+                <!-- VISUAL 4: Resilience Chart (Hidden) -->
+                <div id="visual-resilience" class="pillar-visual hidden w-full h-full flex flex-col justify-center">
+                    <div class="chart-container">
+                        <canvas id="chartResilience"></canvas>
+                    </div>
+                    <div class="mt-4 bg-orange-50 p-3 rounded border border-orange-100 text-center">
+                        <p class="text-xs text-orange-800 font-bold">Gita 2.40: Nehābhikrama-nāśo ’sti</p>
+                        <p class="text-[10px] text-orange-600">"In this endeavor there is no loss..."</p>
+                    </div>
+                </div>
+
+                <!-- VISUAL 5: Devotion Flower (Hidden) -->
+                <div id="visual-devotion" class="pillar-visual hidden w-full max-w-sm text-center">
+                    <div class="bg-stone-50 p-6 rounded-xl border border-stone-200 shadow-sm min-h-[300px] flex flex-col justify-between">
+                        <div>
+                            <p class="text-xs font-bold text-stone-400 uppercase mb-4">The Mood of Offering</p>
+                            <div class="flex justify-center space-x-2 mb-6">
+                                <button onclick="setDevotionMode('fear')" class="px-3 py-2 bg-stone-200 text-stone-600 rounded text-xs hover:bg-stone-300">Out of Fear/Duty</button>
+                                <button onclick="setDevotionMode('love')" class="px-3 py-2 bg-orange-100 text-orange-700 rounded text-xs font-bold hover:bg-orange-200">Out of Love (Bhakti)</button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-center items-center h-32">
+                            <div id="bhakti-flower" class="text-6xl transition-all duration-700 transform">
+                                🥀
+                            </div>
+                        </div>
+
+                        <p id="bhakti-msg" class="text-sm font-serif text-stone-500">How will you offer your service today?</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- DASHBOARD SECTION (Functional) -->
+    <section id="dashboard" class="bg-stone-100 py-16 border-t border-stone-200 min-h-screen">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <div class="flex flex-col md:flex-row justify-between items-end mb-8">
+                <div>
+                    <h2 class="serif text-4xl text-stone-800">My Daily Offering</h2>
+                    <p class="text-stone-500 mt-2">Date: <span id="currentDateDisplay" class="font-bold text-stone-700"></span></p>
+                </div>
+                <div class="mt-4 md:mt-0 space-x-4">
+                     <button onclick="exportData()" class="text-xs text-stone-500 hover:text-stone-800 underline">Export Backup</button>
+                     <button onclick="clearData()" class="text-xs text-red-400 hover:text-red-600 underline">Reset All Data</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Left Column: Settings (4 cols) -->
+                <div class="lg:col-span-4 space-y-6">
+                    
+                    <!-- Identity Manager -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-stone-200">
+                        <h3 class="serif text-lg text-stone-800 mb-2">My Sankalpa</h3>
+                        <p class="text-xs text-stone-400 mb-3">Who are you in your spiritual practice?</p>
+                        <div id="identityDisplay" class="hidden mb-3 p-3 bg-orange-50 rounded border border-orange-100">
+                            <p class="text-orange-900 font-serif italic text-sm" id="identityText"></p>
+                            <button onclick="editIdentity()" class="text-[10px] text-orange-500 underline mt-1">Edit</button>
+                        </div>
+                        <div id="identityEdit">
+                            <input type="text" id="identityInput" placeholder="e.g. A humble servant..." class="w-full px-3 py-2 text-sm border border-stone-300 rounded focus:ring-1 focus:ring-orange-300 focus:outline-none mb-2">
+                            <button onclick="saveIdentity()" class="w-full bg-stone-700 text-stone-50 hover:bg-stone-600 py-2 rounded text-xs font-bold uppercase tracking-wider">Set Identity</button>
+                        </div>
+                    </div>
+
+                    <!-- Ritual Manager -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-stone-200">
+                        <h3 class="serif text-lg text-stone-800 mb-4">My Rituals</h3>
+                        <div id="ritualList" class="space-y-2 mb-4 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <div class="border-t border-stone-100 pt-3">
+                            <p class="text-[10px] font-bold text-stone-400 uppercase mb-2">Add New Service</p>
+                            <input type="text" id="newRitualName" placeholder="Name (e.g. Read Gita)" class="w-full text-sm px-3 py-2 border border-stone-300 rounded mb-2 bg-stone-50">
+                            <div class="flex space-x-2 mb-2">
+                                <input type="number" id="newRitualTime" placeholder="Mins" class="w-1/2 text-sm px-3 py-2 border border-stone-300 rounded bg-stone-50">
+                                <select id="newRitualEmoji" class="w-1/2 text-sm px-3 py-2 border border-stone-300 rounded bg-white">
+                                    <option value="📿">📿 Beads</option>
+                                    <option value="📖">📖 Book</option>
+                                    <option value="🧘">🧘 Sit</option>
+                                    <option value="🕯️">🕯️ Light</option>
+                                    <option value="🧹">🧹 Clean</option>
+                                    <option value="🙏">🙏 Bow</option>
+                                    <option value="🎵">🎵 Music</option>
+                                    <option value="🌿">🌿 Plant</option>
+                                </select>
+                            </div>
+                            <button onclick="addCustomRitual()" class="w-full bg-orange-100 text-orange-800 hover:bg-orange-200 py-2 rounded text-xs font-bold transition-colors">+ Add Ritual</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Log & History (8 cols) -->
+                <div class="lg:col-span-8 space-y-6">
+                    
+                    <!-- TODAY'S CARD -->
+                    <div class="bg-white rounded-xl shadow-md border border-stone-200 overflow-hidden relative transition-shadow hover:shadow-lg">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-300 to-orange-500"></div>
+                        
+                        <div class="p-6 md:p-8">
+                            <!-- Checklist Header -->
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="serif text-2xl text-stone-800">Today's Service</h3>
+                                <div class="bg-stone-100 px-3 py-1 rounded-full text-xs font-bold text-stone-600 border border-stone-200">
+                                    Progress: <span id="dailyScore" class="text-orange-600">0%</span>
+                                </div>
+                            </div>
+
+                            <!-- Dynamic Checklist -->
+                            <div id="todayRitualsList" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+                                <!-- JS Populates Checkboxes -->
+                            </div>
+
+                            <hr class="border-stone-100 mb-8">
+
+                            <!-- The Journal (Heart & Mind) -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- The Nectar (Highlight) -->
+                                <div class="bg-orange-50/50 p-4 rounded-xl border border-orange-100 hover:bg-orange-50 transition-colors">
+                                    <label class="block text-orange-800 font-serif font-bold mb-2 flex items-center">
+                                        <span class="mr-2 text-lg">✨</span> Nectar of the Day
+                                    </label>
+                                    <p class="text-[10px] text-orange-600/70 uppercase tracking-wider mb-2">What inspired you?</p>
+                                    <textarea id="dailyNectar" rows="3" class="journal-input w-full p-3 rounded-lg text-sm bg-white text-stone-700 resize-none" placeholder="A realization, a sweet moment..."></textarea>
+                                </div>
+
+                                <!-- Remarks (Optional) -->
+                                <div class="bg-stone-50 p-4 rounded-xl border border-stone-100 hover:bg-stone-100 transition-colors">
+                                    <label class="block text-stone-600 font-bold text-sm mb-2 flex items-center">
+                                        <span class="mr-2 text-lg">📝</span> Remarks
+                                    </label>
+                                    <p class="text-[10px] text-stone-400 uppercase tracking-wider mb-2">Challenges or Notes</p>
+                                    <textarea id="dailyNotes" rows="3" class="journal-input w-full p-3 rounded-lg text-sm bg-white text-stone-700 resize-none" placeholder="Observations..."></textarea>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 text-right h-4">
+                                <span class="text-[10px] text-emerald-500 uppercase tracking-widest opacity-0 transition-opacity" id="saveStatus">Saved ✓</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HISTORY SECTION -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-stone-200">
+                        <div class="flex justify-between items-end mb-4">
+                            <h3 class="serif text-lg text-stone-800">Practice History</h3>
+                            <div class="text-xs text-stone-400 flex items-center gap-2">
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-stone-200 mr-1"></span> Missed</span>
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-orange-200 mr-1"></span> Journal Only</span>
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-400 mr-1"></span> Service Done</span>
+                            </div>
+                        </div>
+                        
+                        <!-- The Garden Visualization -->
+                        <div class="garden-grid mb-8" id="gardenGrid">
+                            <!-- JS populates -->
+                        </div>
+                        
+                        <!-- Recent Journal Entries -->
+                        <div class="border-t border-stone-100 pt-6">
+                            <h4 class="text-xs font-bold text-stone-400 uppercase mb-4 tracking-widest">Recent Realizations</h4>
+                            <div id="recentJournalEntries" class="space-y-3">
+                                <!-- JS Populates Last 3 Entries -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-stone-900 text-stone-400 py-16 mt-12 border-t border-stone-800">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <span class="text-3xl block mb-6">🪷</span>
+            <p class="serif text-2xl text-stone-200 italic mb-4 leading-relaxed">"In this endeavor there is no loss or diminution, and a little advancement on this path can protect one from the most dangerous type of fear."</p>
+            <p class="text-xs uppercase tracking-widest text-stone-600 font-bold">— Bhagavad Gita 2.40</p>
+        </div>
+    </footer>
+
+    <!-- LOGIC -->
+    <script>
+        // ==========================================
+        // 1. DATA MANAGEMENT & CONFIG
+        // ==========================================
+        const DB_KEY = 'sadhana_interactive_v4';
+        const TODAY_KEY = new Date().toISOString().split('T')[0];
+
+        const DEFAULT_DATA = {
+            identity: "",
+            myRituals: [
+                { id: 101, name: "Chanting (Japa)", time: 10, emoji: "📿" },
+                { id: 102, name: "Reading", time: 15, emoji: "📖" }
+            ],
+            dailyLogs: {} 
+        };
+
+        let appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        let charts = {}; // Store chart instances
+
+        // ==========================================
+        // 2. INITIALIZATION
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            renderDashboard();
+            setupAutoSave();
+            
+            // Initialize Dashboard Date
+            document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        });
+
+        // ==========================================
+        // 3. INTERACTIVE PILLARS LOGIC
+        // ==========================================
+        
+        const PILLAR_CONTENT = {
+            identity: {
+                title: "Identity over Mood",
+                html: `<span class="text-orange-500 font-bold tracking-widest text-xs uppercase mb-3 block">Pillar 01</span>
+                       <h3 class="serif text-4xl text-stone-800 mb-6">Identity over Mood</h3>
+                       <p class="text-lg text-stone-600 leading-relaxed mb-6">Don't say "I will try to chant." Say "I am a chanter."<br><br>In spiritual life, we act according to our true self (*svarupa*), not our temporary feelings. When you attach discipline to your identity, you bypass the need for daily willpower.</p>
+                       <blockquote class="border-l-4 border-orange-300 pl-4 italic text-stone-500 my-4">"This is who I am becoming, so this is what I do."</blockquote>`
+            },
+            rhythm: {
+                title: "Rhythm before Intensity",
+                html: `<span class="text-emerald-500 font-bold tracking-widest text-xs uppercase mb-3 block">Pillar 02</span>
+                       <h3 class="serif text-4xl text-stone-800 mb-6">Rhythm before Intensity</h3>
+                       <p class="text-lg text-stone-600 leading-relaxed mb-6">Krishna recommends *Abhyāsa-yoga* (practice). This implies regularity.<br><br>The sun does not rise intensely once a week; it rises gently every day. Small daily acts accumulate far more spiritual power than sporadic bursts of passion.</p>`
+            },
+            structure: {
+                title: "Structure is Mercy",
+                html: `<span class="text-blue-500 font-bold tracking-widest text-xs uppercase mb-3 block">Pillar 03</span>
+                       <h3 class="serif text-4xl text-stone-800 mb-6">Structure is Mercy</h3>
+                       <p class="text-lg text-stone-600 leading-relaxed mb-6">When inspiration fades, *Viddhi-Bhakti* (regulated devotion) takes over.<br><br>Think of your routine not as a cage, but as a safety net. When your mind is weak, the structure holds you up until the natural taste (*Ruci*) returns.</p>`
+            },
+            resilience: {
+                title: "Expect Slips",
+                html: `<span class="text-red-500 font-bold tracking-widest text-xs uppercase mb-3 block">Pillar 04</span>
+                       <h3 class="serif text-4xl text-stone-800 mb-6">Expect Slips</h3>
+                       <p class="text-lg text-stone-600 leading-relaxed mb-6">Discipline is not never failing; it is returning after falling.<br><br>Krishna tells Arjuna in Gita 2.40: "In this endeavor there is no loss." A slip does not erase your previous service. Just stand up and continue.</p>`
+            },
+            devotion: {
+                title: "Devotion over Pressure",
+                html: `<span class="text-purple-500 font-bold tracking-widest text-xs uppercase mb-3 block">Pillar 05</span>
+                       <h3 class="serif text-4xl text-stone-800 mb-6">Devotion over Pressure</h3>
+                       <p class="text-lg text-stone-600 leading-relaxed mb-6">Force creates dry friction. Love creates flow.<br><br>When actions are offered with love (*Bhakti*) rather than fear of failure, the mind resists less. Even a small flower offered with genuine love is accepted by the Lord.</p>`
+            }
+        };
+
+        function switchPillar(pillarId) {
+            // Update Text
+            const contentDiv = document.getElementById('pillar-content-text');
+            contentDiv.innerHTML = PILLAR_CONTENT[pillarId].html;
+
+            // Update Tabs Styling
+            document.querySelectorAll('.pillar-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${pillarId}`).classList.add('active');
+
+            // Toggle Visual Modules
+            document.querySelectorAll('.pillar-visual').forEach(v => v.classList.add('hidden'));
+            document.getElementById(`visual-${pillarId}`).classList.remove('hidden');
+
+            // Initialize specific charts/interactions if needed
+            if(pillarId === 'rhythm') initRhythmChart();
+            if(pillarId === 'resilience') initResilienceChart();
+        }
+
+        // --- Visual 1: Identity Sim ---
+        function runIdentitySim() {
+            const action = document.getElementById('sim-action').value;
+            const resText = document.getElementById('identity-result-text');
+            const resDiv = document.getElementById('identity-result');
+            
+            // Heuristic transform
+            let noun = action.split(' ').pop();
+            if(noun.endsWith('ing')) noun = noun.slice(0, -3) + 'er'; // chant->chanter
+            else noun = "servant of " + noun;
+
+            resText.innerHTML = `"I am not just doing a task.<br>I am a <span class='text-orange-600'>${noun}</span>."`;
+            resDiv.classList.remove('hidden');
+        }
+
+        // --- Visual 2: Rhythm Chart ---
+        function initRhythmChart() {
+            if(charts.rhythm) return; // Already exists
+            const ctx = document.getElementById('chartRhythm').getContext('2d');
+            charts.rhythm = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+                    datasets: [
+                        {
+                            label: 'Growth',
+                            data: [10, 20, 30, 40, 50, 60, 70],
+                            borderColor: '#10b981', // Emerald
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: {display: false} },
+                    scales: { y: {display: false}, x: {display: false} }
+                }
+            });
+        }
+
+        function updateRhythmChart(mode) {
+            if(!charts.rhythm) return;
+            if(mode === 'steady') {
+                charts.rhythm.data.datasets[0].data = [10, 20, 30, 40, 50, 60, 70];
+                charts.rhythm.data.datasets[0].borderColor = '#10b981';
+                charts.rhythm.data.datasets[0].fill = true;
+            } else {
+                charts.rhythm.data.datasets[0].data = [0, 80, 0, 0, 90, 0, 0];
+                charts.rhythm.data.datasets[0].borderColor = '#ef4444';
+                charts.rhythm.data.datasets[0].fill = false;
+            }
+            charts.rhythm.update();
+        }
+
+        // --- Visual 3: Structure Slider ---
+        function updateStructureVisual(val) {
+            const person = document.getElementById('struct-person');
+            const net = document.getElementById('struct-net');
+            const pillars = document.getElementById('struct-pillars');
+            const msg = document.getElementById('struct-msg');
+
+            // Move person based on motivation (Higher value = Higher y pos visually)
+            // CSS: translateY. 0 val = bottom (0px translate). 100 val = top (-150px)
+            // Actually, let's make logic: Low motivation = Person falls.
+            
+            const inverseVal = 100 - val;
+            
+            // If val < 30, person sits on net.
+            if(val < 30) {
+                person.style.transform = `translateY(0px)`; // Sits on net
+                net.style.opacity = '1';
+                pillars.style.opacity = '1';
+                msg.innerText = "Motivation Low. Structure holds you up.";
+                msg.className = "text-sm font-serif italic mt-4 text-stone-600";
+            } else {
+                // Flying high
+                const height = (val - 30) * 1.5;
+                person.style.transform = `translateY(-${height}px)`;
+                net.style.opacity = '0.3';
+                pillars.style.opacity = '0.3';
+                msg.innerText = "Motivation High. Spontaneous flow.";
+                msg.className = "text-sm font-serif italic mt-4 text-orange-500";
+            }
+        }
+
+        // --- Visual 4: Resilience Chart ---
+        function initResilienceChart() {
+            if(charts.resilience) return;
+            const ctx = document.getElementById('chartResilience').getContext('2d');
+            charts.resilience = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Start', 'Day 10', 'Day 20', 'Slip', 'Recovery', 'Day 40'],
+                    datasets: [{
+                        label: 'Progress',
+                        data: [10, 30, 50, 25, 45, 70],
+                        borderColor: '#57534e',
+                        segment: {
+                            borderColor: ctx => ctx.p0.parsed.y > ctx.p1.parsed.y ? '#ef4444' : '#10b981',
+                            borderDash: ctx => ctx.p0.parsed.y > ctx.p1.parsed.y ? [5, 5] : undefined,
+                        },
+                        tension: 0.3,
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: {display:false} },
+                    scales: { x: {display:false}, y: {display:false} }
+                }
+            });
+        }
+
+        // --- Visual 5: Devotion Flower ---
+        function setDevotionMode(mode) {
+            const flower = document.getElementById('bhakti-flower');
+            const msg = document.getElementById('bhakti-msg');
+            
+            if(mode === 'love') {
+                flower.innerText = "🌺";
+                flower.style.transform = "scale(1.5) rotate(0deg)";
+                msg.innerText = "Offering accepted instantly.";
+                msg.classList.add("text-orange-600", "font-bold");
+            } else {
+                flower.innerText = "🥀";
+                flower.style.transform = "scale(0.8) rotate(45deg)";
+                msg.innerText = "The heart feels dry.";
+                msg.classList.remove("text-orange-600", "font-bold");
+            }
+        }
+
+        // ==========================================
+        // 4. DASHBOARD LOGIC (Same as v3 but refined)
+        // ==========================================
+        
+        function loadData() {
+            const stored = localStorage.getItem(DB_KEY);
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    appData = { ...DEFAULT_DATA, ...parsed };
+                    if (!appData.dailyLogs[TODAY_KEY]) {
+                        appData.dailyLogs[TODAY_KEY] = { completedIds: [], nectar: "", notes: "" };
+                    }
+                } catch(e) { console.error(e); }
+            } else {
+                appData.dailyLogs[TODAY_KEY] = { completedIds: [], nectar: "", notes: "" };
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(DB_KEY, JSON.stringify(appData));
+            showSaveStatus();
+        }
+
+        function showSaveStatus() {
+            const el = document.getElementById('saveStatus');
+            el.classList.remove('opacity-0');
+            setTimeout(() => el.classList.add('opacity-0'), 2000);
+        }
+
+        function renderDashboard() {
+            renderIdentity();
+            renderRituals();
+            renderChecklist();
+            renderGarden();
+            renderJournalHistory();
+        }
+
+        // --- Render Functions ---
+        function renderIdentity() {
+            const disp = document.getElementById('identityDisplay');
+            const edit = document.getElementById('identityEdit');
+            const txt = document.getElementById('identityText');
+            
+            if(appData.identity) {
+                disp.classList.remove('hidden');
+                edit.classList.add('hidden');
+                txt.innerText = `"I am ${appData.identity}"`;
+            } else {
+                disp.classList.add('hidden');
+                edit.classList.remove('hidden');
+            }
+        }
+
+        function renderRituals() {
+            const list = document.getElementById('ritualList');
+            list.innerHTML = '';
+            appData.myRituals.forEach(r => {
+                const el = document.createElement('div');
+                el.className = 'flex justify-between items-center bg-stone-50 p-2 rounded border border-stone-200 text-xs';
+                el.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-base mr-2">${r.emoji}</span>
+                        <span class="font-bold text-stone-700">${r.name}</span>
+                        <span class="ml-2 text-stone-400">(${r.time}m)</span>
+                    </div>
+                    <button onclick="deleteRitual(${r.id})" class="text-stone-300 hover:text-red-500 font-bold px-2">×</button>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        function renderChecklist() {
+            const container = document.getElementById('todayRitualsList');
+            container.innerHTML = '';
+            const log = appData.dailyLogs[TODAY_KEY];
+
+            if (appData.myRituals.length === 0) {
+                container.innerHTML = '<p class="text-stone-400 italic text-xs col-span-2 text-center">Add a service to begin.</p>';
+                return;
+            }
+
+            appData.myRituals.forEach(r => {
+                const isChecked = log.completedIds.includes(r.id);
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <label class="cursor-pointer relative block h-full group">
+                        <input type="checkbox" class="ritual-checkbox hidden" onchange="toggleCheck(${r.id})" ${isChecked ? 'checked' : ''}>
+                        <div class="flex items-center p-3 rounded-lg border border-stone-200 bg-white group-hover:border-orange-200 transition-all h-full shadow-sm">
+                            <div class="w-10 h-10 flex items-center justify-center bg-stone-50 rounded-full mr-3 text-xl transition-colors ${isChecked ? 'bg-emerald-100' : ''}">
+                                ${r.emoji}
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-bold text-stone-700 text-sm ${isChecked ? 'line-through opacity-50' : ''}">${r.name}</h4>
+                                <p class="text-[10px] text-stone-400">${r.time} mins</p>
+                            </div>
+                            <div class="check-icon opacity-0 transform scale-50 transition-all text-emerald-500 text-xl font-bold">✓</div>
+                        </div>
+                    </label>
+                `;
+                container.appendChild(div);
+            });
+
+            // Score
+            const pct = appData.myRituals.length > 0 
+                ? Math.round((log.completedIds.length / appData.myRituals.length) * 100) 
+                : 0;
+            document.getElementById('dailyScore').innerText = `${pct}%`;
+        }
+
+        function renderGarden() {
+            const grid = document.getElementById('gardenGrid');
+            grid.innerHTML = '';
+            const today = new Date();
+            
+            // Last 42 days (6 weeks)
+            for (let i = 41; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(today.getDate() - i);
+                const key = d.toISOString().split('T')[0];
+                const log = appData.dailyLogs[key];
+                
+                const cell = document.createElement('div');
+                cell.className = 'garden-cell bg-stone-100';
+                cell.title = key;
+
+                if (log) {
+                    const hasRitual = log.completedIds && log.completedIds.length > 0;
+                    const hasNote = (log.nectar && log.nectar.trim()) || (log.notes && log.notes.trim());
+
+                    if (hasRitual) {
+                        cell.classList.remove('bg-stone-100');
+                        cell.classList.add('bg-emerald-400');
+                    } else if (hasNote) {
+                        cell.classList.remove('bg-stone-100');
+                        cell.classList.add('bg-orange-200');
+                    }
+                }
+                grid.appendChild(cell);
+            }
+        }
+
+        function renderJournalHistory() {
+            const cont = document.getElementById('recentJournalEntries');
+            cont.innerHTML = '';
+            const entries = Object.keys(appData.dailyLogs)
+                .sort().reverse()
+                .filter(k => {
+                    const l = appData.dailyLogs[k];
+                    return (l.nectar && l.nectar.trim()) || (l.notes && l.notes.trim());
+                })
+                .slice(0, 3);
+            
+            if(entries.length === 0) {
+                cont.innerHTML = '<p class="text-xs text-stone-400 italic">No nectar recorded yet.</p>';
+                return;
+            }
+
+            entries.forEach(k => {
+                const log = appData.dailyLogs[k];
+                const dateStr = new Date(k).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+                const div = document.createElement('div');
+                div.className = 'bg-stone-50 p-3 rounded-lg border border-stone-200 text-sm';
+                div.innerHTML = `
+                    <div class="flex justify-between mb-1">
+                        <span class="font-bold text-xs text-stone-700">${dateStr}</span>
+                    </div>
+                    ${log.nectar ? `<div class="mb-1"><span class="text-orange-500 text-[10px] uppercase font-bold">Nectar</span> <span class="italic text-stone-600">"${log.nectar}"</span></div>` : ''}
+                    ${log.notes ? `<div><span class="text-stone-400 text-[10px] uppercase font-bold">Note</span> <span class="text-stone-500">${log.notes}</span></div>` : ''}
+                `;
+                cont.appendChild(div);
+            });
+        }
+
+        // --- Interaction Handlers ---
+        function saveIdentity() {
+            const val = document.getElementById('identityInput').value.trim();
+            if(val) { appData.identity = val; saveData(); renderIdentity(); }
+        }
+        function editIdentity() {
+            appData.identity = ""; saveData(); renderIdentity();
+        }
+        function addCustomRitual() {
+            const name = document.getElementById('newRitualName').value;
+            const time = document.getElementById('newRitualTime').value || 5;
+            const emoji = document.getElementById('newRitualEmoji').value;
+            if(!name) return;
+            appData.myRituals.push({ id: Date.now(), name, time: parseInt(time), emoji });
+            document.getElementById('newRitualName').value = "";
+            saveData(); renderRituals(); renderChecklist();
+        }
+        function deleteRitual(id) {
+            if(confirm("Remove this service?")) {
+                appData.myRituals = appData.myRituals.filter(r => r.id !== id);
+                saveData(); renderRituals(); renderChecklist();
+            }
+        }
+        function toggleCheck(id) {
+            const log = appData.dailyLogs[TODAY_KEY];
+            const idx = log.completedIds.indexOf(id);
+            if(idx > -1) log.completedIds.splice(idx, 1);
+            else log.completedIds.push(id);
+            saveData(); renderChecklist(); renderGarden();
+        }
+        function setupAutoSave() {
+            const nectar = document.getElementById('dailyNectar');
+            const notes = document.getElementById('dailyNotes');
+            const log = appData.dailyLogs[TODAY_KEY];
+            if(log) {
+                nectar.value = log.nectar || "";
+                notes.value = log.notes || "";
+            }
+            nectar.addEventListener('input', e => { appData.dailyLogs[TODAY_KEY].nectar = e.target.value; saveData(); });
+            notes.addEventListener('input', e => { appData.dailyLogs[TODAY_KEY].notes = e.target.value; saveData(); });
+        }
+        function clearData() {
+            if(confirm("Reset all data?")) { localStorage.removeItem(DB_KEY); location.reload(); }
+        }
+        function exportData() {
+            const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData));
+            const dl = document.createElement('a');
+            dl.setAttribute("href", str);
+            dl.setAttribute("download", `sadhana_backup_${TODAY_KEY}.json`);
+            dl.click();
+        }
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html> 

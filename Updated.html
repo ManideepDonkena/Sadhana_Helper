@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind OS v2.0 - Gamified Workspace</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+
+        :root {
+            --bg: #0b0e14;
+            --sidebar: #151922;
+            --panel: #1e2330;
+            --text-main: #e2e8f0;
+            --text-dim: #94a3b8;
+            --accent: #6366f1;
+            --focus: #f43f5e;
+            --resource: #10b981;
+            --thought: #f59e0b;
+            --mood: #8b5cf6;
+            --border: rgba(255,255,255,0.08);
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR --- */
+        nav {
+            width: 80px;
+            background: var(--sidebar);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            border-right: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        .nav-item {
+            width: 50px; height: 50px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-dim);
+            transition: 0.2s;
+            position: relative;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-item.active { background: var(--panel); color: var(--accent); box-shadow: 0 0 15px rgba(99, 102, 241, 0.2); }
+        
+        .nav-item[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute; left: 60px;
+            background: #333; padding: 5px 10px;
+            border-radius: 4px; font-size: 0.8rem;
+            white-space: nowrap; z-index: 100;
+        }
+
+        /* --- MAIN AREA --- */
+        main {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER & XP BAR */
+        header {
+            height: 70px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            background: var(--bg);
+        }
+        
+        .level-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 300px;
+        }
+        .level-badge {
+            background: var(--accent);
+            color: white;
+            font-family: 'JetBrains Mono';
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        .xp-bar-bg {
+            flex: 1;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .xp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #a855f7);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .app-status { font-size: 0.8rem; display: flex; gap: 10px; align-items: center; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #333; }
+        .status-dot.connected { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+
+        /* VIEWS */
+        .view-section {
+            display: none;
+            padding: 30px;
+            height: calc(100% - 70px);
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease;
+        }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: 0; } }
+
+        h2 { font-family: 'JetBrains Mono'; text-transform: uppercase; letter-spacing: 2px; margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+
+        /* --- INPUTS --- */
+        .input-group { background: var(--panel); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
+        input, textarea, select {
+            width: 100%; background: #11141a; border: 1px solid var(--border); padding: 12px;
+            color: white; border-radius: 6px; margin-bottom: 10px; font-family: 'Inter';
+        }
+        input:focus, textarea:focus { border-color: var(--accent); }
+        button { padding: 10px 20px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-google { background: white; color: #333; display: flex; align-items: center; gap: 10px; }
+
+        /* --- FOCUS MODULE --- */
+        .focus-container { display: grid; grid-template-columns: 1fr 350px; gap: 30px; height: 100%; }
+        .timer-box {
+            background: var(--panel); border-radius: 20px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; border: 1px solid var(--border); position: relative;
+        }
+        .time-display { font-size: 6rem; font-family: 'JetBrains Mono'; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .active-task-label { color: var(--focus); font-size: 1.2rem; margin-bottom: 20px; text-align: center; max-width: 80%; }
+        
+        /* Ambience Controls */
+        .ambience-controls {
+            position: absolute; bottom: 20px; display: flex; gap: 10px;
+        }
+        .sound-btn {
+            background: rgba(255,255,255,0.05); color: var(--text-dim); border-radius: 50%;
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .sound-btn.active { background: var(--accent); color: white; box-shadow: 0 0 15px var(--accent); }
+
+        .tasks-panel { background: var(--sidebar); border-radius: 12px; padding: 20px; overflow-y: auto; }
+        .task-item {
+            background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; margin-bottom: 10px;
+            cursor: pointer; border-left: 3px solid transparent; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;
+        }
+        .task-item:hover { background: rgba(255,255,255,0.08); }
+        .task-item.selected { border-left-color: var(--focus); background: rgba(244, 63, 94, 0.1); }
+        .check-circle {
+            width: 20px; height: 20px; border: 2px solid var(--text-dim); border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .check-circle:hover { border-color: var(--resource); color: var(--resource); }
+
+        /* --- MOOD MODULE --- */
+        .mood-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+        .mood-btn {
+            background: var(--panel); border: 1px solid var(--border); padding: 20px; border-radius: 12px;
+            text-align: center; cursor: pointer; font-size: 2rem; transition: transform 0.2s;
+        }
+        .mood-btn:hover { transform: scale(1.05); border-color: var(--mood); }
+        .chart-container { background: var(--panel); padding: 20px; border-radius: 12px; height: 300px; }
+
+        /* --- GRIDS --- */
+        .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .card { background: var(--panel); padding: 20px; border-radius: 8px; border: 1px solid var(--border); }
+        .tag { font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; background: #333; display: inline-block; margin-top: 10px; }
+        
+        .c-thought { border-top: 3px solid var(--thought); }
+        .c-resource { border-top: 3px solid var(--resource); }
+
+        /* XP NOTIFICATION POPUP */
+        #xp-popup {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: var(--accent); color: white; padding: 10px 30px; border-radius: 50px;
+            font-weight: bold; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+            opacity: 0; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 200;
+        }
+        #xp-popup.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        /* LOGIN OVERLAY */
+        #auth-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 14, 20, 0.95); z-index: 100;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN -->
+    <div id="auth-overlay">
+        <h1 style="font-family: 'JetBrains Mono'; font-size: 3rem;">MIND_OS <span style="color:var(--accent)">v2.0</span></h1>
+        <p style="color:var(--text-dim); margin-bottom: 30px;">Gamified Workspace: Thoughts, Focus & Mood</p>
+        <button id="auth-btn" class="btn-google" onclick="handleAuth()">
+            <i class="fab fa-google"></i> Connect Google Account
+        </button>
+    </div>
+
+    <!-- XP POPUP -->
+    <div id="xp-popup">+50 XP Task Complete!</div>
+
+    <!-- NAV -->
+    <nav>
+        <div class="nav-item active" onclick="switchView('view-focus')" data-tooltip="Focus">
+            <i class="fas fa-bullseye" style="color: var(--focus)"></i>
+        </div>
+        <div class="nav-item" onclick="switchView('view-thoughts')" data-tooltip="Thoughts">
+            <i class="fas fa-brain" style="color: var(--thought)"></i>
+        </div>
+        <div class="nav-item" onclick="switchView('view-resources')" data-tooltip="Vault">
+            <i class="fas fa-book-bookmark" style="color: var(--resource)"></i>
+        </div>
+        <div class="nav-item" onclick="switchView('view-mood')" data-tooltip="Mood Tracker">
+            <i class="fas fa-chart-line" style="color: var(--mood)"></i>
+        </div>
+        
+        <div style="margin-top: auto; margin-bottom: 20px;">
+            <div class="nav-item" onclick="handleSignout()" data-tooltip="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main>
+        <header>
+            <div class="level-container">
+                <div class="level-badge" id="user-level">LVL 1</div>
+                <div class="xp-bar-bg">
+                    <div class="xp-bar-fill" id="xp-fill"></div>
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-dim)" id="xp-text">0/100</div>
+            </div>
+
+            <div class="app-status">
+                <div class="status-dot" id="conn-dot"></div>
+                <span id="conn-text">Disconnected</span>
+            </div>
+        </header>
+
+        <!-- 1. FOCUS VIEW -->
+        <div id="view-focus" class="view-section active">
+            <div class="focus-container">
+                <!-- Timer Side -->
+                <div class="timer-box">
+                    <h3 style="color:var(--text-dim); margin-bottom:10px">CURRENT OBJECTIVE</h3>
+                    <div class="active-task-label" id="active-task-name">Select a task to start →</div>
+                    <div class="time-display" id="timer-display">25:00</div>
+                    
+                    <div style="display:flex; gap:15px; margin-top:30px;">
+                        <button class="btn-primary" onclick="toggleTimer()" id="timer-btn">START FOCUS</button>
+                        <button style="background:transparent; border:1px solid var(--border); color:white;" onclick="resetTimer()">RESET</button>
+                    </div>
+
+                    <!-- Soundscapes (Using reliable looping audio hosted on simple CDNs) -->
+                    <div class="ambience-controls">
+                        <div class="sound-btn" onclick="toggleSound('rain', this)" title="Rain"><i class="fas fa-cloud-rain"></i></div>
+                        <div class="sound-btn" onclick="toggleSound('fire', this)" title="Fire"><i class="fas fa-fire"></i></div>
+                        <div class="sound-btn" onclick="toggleSound('cafe', this)" title="Cafe"><i class="fas fa-coffee"></i></div>
+                    </div>
+                    <audio id="audio-rain" loop src="https://cdn.pixabay.com/audio/2022/02/15/audio_2435332815.mp3"></audio>
+                    <audio id="audio-fire" loop src="https://cdn.pixabay.com/audio/2021/08/09/audio_54665425d5.mp3"></audio>
+                    <audio id="audio-cafe" loop src="https://cdn.pixabay.com/audio/2021/08/04/audio_bb8822d446.mp3"></audio>
+
+                </div>
+
+                <!-- Tasks Side -->
+                <div class="tasks-panel">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h4 style="margin:0;">Google Tasks</h4>
+                        <button onclick="fetchGoogleTasks()" style="background:none; color:var(--accent); padding:0;"><i class="fas fa-sync"></i></button>
+                    </div>
+                    <select id="tasklist-select" onchange="fetchTasksInList(this.value)" style="margin-bottom:15px;">
+                        <option>Loading lists...</option>
+                    </select>
+                    <div id="google-tasks-list">
+                        <div style="color:var(--text-dim); font-size:0.9rem; text-align:center; margin-top:20px;">Connecting to Google...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. THOUGHTS VIEW -->
+        <div id="view-thoughts" class="view-section">
+            <h2 style="color:var(--thought)">Thought Logger (+10 XP)</h2>
+            <div class="input-group">
+                <textarea id="thought-input" placeholder="Capture your idea..." rows="3"></textarea>
+                <div style="text-align: right;">
+                    <button class="btn-primary" style="background:var(--thought)" onclick="addEntry('thought')">Log Thought</button>
+                </div>
+            </div>
+            <div id="thoughts-grid" class="grid-list"></div>
+        </div>
+
+        <!-- 3. RESOURCES VIEW -->
+        <div id="view-resources" class="view-section">
+            <h2 style="color:var(--resource)">Resource Vault (+10 XP)</h2>
+            <div class="input-group">
+                <input type="text" id="res-url" placeholder="URL">
+                <input type="text" id="res-title" placeholder="Title">
+                <div style="display:flex; justify-content:space-between;">
+                    <select id="res-tag" style="width: 150px;">
+                        <option value="Dev">Dev 💻</option>
+                        <option value="Design">Design 🎨</option>
+                        <option value="Read">Read 📄</option>
+                    </select>
+                    <button class="btn-primary" style="background:var(--resource)" onclick="addEntry('resource')">Save Resource</button>
+                </div>
+            </div>
+            <div id="resources-grid" class="grid-list"></div>
+        </div>
+
+        <!-- 4. MOOD VIEW (NEW) -->
+        <div id="view-mood" class="view-section">
+            <h2 style="color:var(--mood)">Mood Tracker (+5 XP)</h2>
+            <p style="color:var(--text-dim)">How are you feeling right now?</p>
+            
+            <div class="mood-grid">
+                <div class="mood-btn" onclick="logMood(1)">😫</div>
+                <div class="mood-btn" onclick="logMood(2)">😕</div>
+                <div class="mood-btn" onclick="logMood(3)">😐</div>
+                <div class="mood-btn" onclick="logMood(4)">🙂</div>
+                <div class="mood-btn" onclick="logMood(5)">🤩</div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="moodChart"></canvas>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- SCRIPTS -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+
+    <script>
+        /** --- CONFIGURATION --- **/
+        const CLIENT_ID = '758661934972-096amjqi6rsn14b9lv3br56ll76lvou6.apps.googleusercontent.com'; 
+        const API_KEY = 'AIzaSyAf5iciZ4xA7xglz90TF1XzGVNAGVIga1U'; 
+        const DB_FILENAME = "mind_os_db.json";
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/tasks';
+        const DISCOVERY_DOCS = [
+            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+            'https://tasks.googleapis.com/$discovery/rest?version=v1'
+        ];
+
+        // STATE
+        let tokenClient;
+        let dbFileId = null;
+        let appData = { thoughts: [], resources: [], moods: [], xp: 0 };
+        let currentTask = null;
+        let timerInterval = null;
+        let timeLeft = 25 * 60;
+        let isTimerRunning = false;
+        let chartInstance = null;
+
+        // --- INITIALIZATION ---
+        function gapiLoaded() {
+            gapi.load('client', () => {
+                gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS })
+                .then(() => updateStatus(false));
+            });
+        }
+
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID, scope: SCOPES, callback: ''
+            });
+            document.getElementById('auth-btn').innerText = "Connect Google Account";
+        }
+
+        function handleAuth() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error) throw resp;
+                document.getElementById('auth-overlay').style.display = 'none';
+                updateStatus(true);
+                await initApp();
+            };
+            tokenClient.requestAccessToken({prompt: ''});
+        }
+
+        function updateStatus(connected) {
+            const dot = document.getElementById('conn-dot');
+            const txt = document.getElementById('conn-text');
+            if(connected) {
+                dot.classList.add('connected');
+                txt.innerText = "System Online";
+            } else {
+                dot.classList.remove('connected');
+                txt.innerText = "Disconnected";
+            }
+        }
+
+        async function initApp() {
+            await loadDatabase();
+            await fetchTaskLists();
+            updateXPUI();
+            renderData();
+            renderMoodChart();
+        }
+
+        // --- GAMIFICATION LOGIC ---
+        function gainXP(amount, message) {
+            appData.xp = (appData.xp || 0) + amount;
+            updateXPUI();
+            saveDatabase();
+            
+            // Show popup
+            const popup = document.getElementById('xp-popup');
+            popup.innerText = `+${amount} XP ${message}`;
+            popup.classList.add('show');
+            setTimeout(() => popup.classList.remove('show'), 2000);
+        }
+
+        function updateXPUI() {
+            const xp = appData.xp || 0;
+            const level = Math.floor(Math.sqrt(xp / 100)) + 1;
+            const nextLevelXP = Math.pow(level, 2) * 100;
+            const prevLevelXP = Math.pow(level - 1, 2) * 100;
+            const levelRange = nextLevelXP - prevLevelXP;
+            const progress = xp - prevLevelXP;
+            const percentage = Math.min(100, (progress / levelRange) * 100);
+
+            document.getElementById('user-level').innerText = `LVL ${level}`;
+            document.getElementById('xp-fill').style.width = `${percentage}%`;
+            document.getElementById('xp-text').innerText = `${Math.round(progress)} / ${levelRange} XP`;
+        }
+
+        // --- DATABASE (DRIVE) ---
+        async function loadDatabase() {
+            try {
+                const response = await gapi.client.drive.files.list({
+                    'q': `name = '${DB_FILENAME}' and trashed = false`,
+                    'fields': 'files(id, name)',
+                    'spaces': 'drive'
+                });
+                const files = response.result.files;
+                if (files && files.length > 0) {
+                    dbFileId = files[0].id;
+                    const content = await gapi.client.drive.files.get({fileId: dbFileId, alt: 'media'});
+                    appData = content.result || { thoughts: [], resources: [], moods: [], xp: 0 };
+                    // Ensure new fields exist
+                    if(!appData.moods) appData.moods = [];
+                    if(!appData.xp) appData.xp = 0;
+                } else {
+                    await createDatabase();
+                }
+            } catch (e) { console.error("DB Error", e); }
+        }
+
+        async function createDatabase() {
+            const fileMetadata = { 'name': DB_FILENAME, 'mimeType': 'application/json' };
+            const response = await gapi.client.drive.files.create({ resource: fileMetadata, fields: 'id' });
+            dbFileId = response.result.id;
+            await saveDatabase();
+        }
+
+        async function saveDatabase() {
+            if (!dbFileId) return;
+            await gapi.client.request({
+                path: '/upload/drive/v3/files/' + dbFileId,
+                method: 'PATCH', params: { uploadType: 'media' }, body: JSON.stringify(appData)
+            });
+        }
+
+        // --- FEATURES LOGIC ---
+
+        function addEntry(type) {
+            if(type === 'thought') {
+                const txt = document.getElementById('thought-input').value;
+                if(!txt) return;
+                appData.thoughts.unshift({ id: Date.now(), text: txt, date: new Date().toLocaleString() });
+                document.getElementById('thought-input').value = '';
+                gainXP(10, "Insight Logged");
+            } else {
+                const url = document.getElementById('res-url').value;
+                const title = document.getElementById('res-title').value;
+                const tag = document.getElementById('res-tag').value;
+                if(!url) return;
+                appData.resources.unshift({ id: Date.now(), url, title, tag, date: new Date().toLocaleDateString() });
+                document.getElementById('res-url').value = '';
+                document.getElementById('res-title').value = '';
+                gainXP(10, "Resource Saved");
+            }
+            renderData();
+            saveDatabase();
+        }
+
+        function logMood(val) {
+            appData.moods.push({ val: val, date: new Date().toISOString() });
+            gainXP(5, "Mood Tracked");
+            renderMoodChart();
+            saveDatabase();
+        }
+
+        function renderData() {
+            document.getElementById('thoughts-grid').innerHTML = appData.thoughts.map(t => `
+                <div class="card c-thought"><p>${t.text}</p><div class="tag">${t.date}</div></div>
+            `).join('');
+            
+            document.getElementById('resources-grid').innerHTML = appData.resources.map(r => `
+                <div class="card c-resource">
+                    <h4><a href="${r.url}" target="_blank" style="color:white;text-decoration:none">${r.title || r.url}</a></h4>
+                    <div class="tag" style="background:var(--resource); color:black;">${r.tag}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderMoodChart() {
+            const ctx = document.getElementById('moodChart').getContext('2d');
+            const last7 = appData.moods.slice(-14); // Last 14 entries
+            
+            if(chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last7.map(m => new Date(m.date).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Mood Level',
+                        data: last7.map(m => m.val),
+                        borderColor: '#8b5cf6',
+                        tension: 0.4,
+                        fill: true,
+                        backgroundColor: 'rgba(139, 92, 246, 0.1)'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { min: 0, max: 6, ticks: { color: '#94a3b8' } }, x: { ticks: { color: '#94a3b8' } } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // --- GOOGLE TASKS ---
+        async function fetchTaskLists() {
+            try {
+                const res = await gapi.client.tasks.tasklists.list();
+                const lists = res.result.items;
+                const select = document.getElementById('tasklist-select');
+                select.innerHTML = '';
+                if (lists && lists.length > 0) {
+                    lists.forEach(l => { let opt = document.createElement('option'); opt.value=l.id; opt.text=l.title; select.add(opt); });
+                    fetchTasksInList(lists[0].id);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function fetchTasksInList(listId) {
+            const container = document.getElementById('google-tasks-list');
+            container.innerHTML = 'Loading...';
+            try {
+                const res = await gapi.client.tasks.tasks.list({ tasklist: listId, showCompleted: false, maxResults: 20 });
+                const tasks = res.result.items || [];
+                container.innerHTML = '';
+                
+                tasks.forEach(task => {
+                    const div = document.createElement('div');
+                    div.className = 'task-item';
+                    div.innerHTML = `
+                        <div style="font-weight:600">${task.title}</div>
+                        <div class="check-circle" onclick="completeTask('${listId}', '${task.id}', this)" title="Complete Task">✓</div>
+                    `;
+                    div.onclick = (e) => { if(e.target.className !== 'check-circle') selectTask(task); };
+                    container.appendChild(div);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function completeTask(listId, taskId, el) {
+            // Visual update immediately
+            el.parentElement.style.opacity = '0.5';
+            
+            try {
+                await gapi.client.tasks.tasks.update({
+                    tasklist: listId, task: taskId,
+                    resource: { id: taskId, status: 'completed' }
+                });
+                gainXP(50, "Task Completed!");
+                el.parentElement.remove();
+            } catch(e) { console.error(e); }
+        }
+
+        function selectTask(task) {
+            currentTask = task;
+            document.getElementById('active-task-name').innerText = task.title;
+            document.querySelectorAll('.task-item').forEach(i => i.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+
+        // --- FOCUS TIMER & SOUND ---
+        function toggleTimer() {
+            const btn = document.getElementById('timer-btn');
+            if(isTimerRunning) {
+                clearInterval(timerInterval); isTimerRunning = false; btn.innerText = "RESUME";
+            } else {
+                if(!currentTask) { alert("Select a task first!"); return; }
+                timerInterval = setInterval(() => {
+                    timeLeft--; updateTimerDisplay();
+                    if(timeLeft <= 0) {
+                        clearInterval(timerInterval); alert("Session Done!");
+                        timeLeft = 25 * 60; isTimerRunning = false; btn.innerText = "START FOCUS";
+                        gainXP(25, "Focus Session Done");
+                    }
+                }, 1000);
+                isTimerRunning = true; btn.innerText = "PAUSE";
+            }
+        }
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft/60).toString().padStart(2,'0');
+            const s = (timeLeft%60).toString().padStart(2,'0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+        function resetTimer() {
+            clearInterval(timerInterval); isTimerRunning = false; timeLeft=25*60; updateTimerDisplay();
+            document.getElementById('timer-btn').innerText = "START FOCUS";
+        }
+
+        function toggleSound(type, btn) {
+            const audio = document.getElementById(`audio-${type}`);
+            if(audio.paused) {
+                // Pause others
+                document.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime=0; });
+                document.querySelectorAll('.sound-btn').forEach(b => b.classList.remove('active'));
+                
+                audio.play();
+                btn.classList.add('active');
+            } else {
+                audio.pause();
+                btn.classList.remove('active');
+            }
+        }
+
+        function switchView(id) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+        
+        function handleSignout() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken('');
+                location.reload();
+            }
+        }
+
+        window.onload = function() { gapiLoaded(); gisLoaded(); }
+    </script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</body>
+</html>

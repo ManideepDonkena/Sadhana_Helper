@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Mind State Laboratory - A suite of interactive diagnostic tools to analyze focus, impulse control, motor stability, and more.">
+    <meta name="keywords"
+        content="mind games, focus test, reaction time, meditation, grounding technique, anxiety relief">
+    <title>Mind State Laboratory | Diagnostic Tools</title>
+    <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Common Styles -->
+    <link rel="stylesheet" href="../../assets/css/notifications.css">
+    <link rel="stylesheet" href="../../assets/css/auth.css">
+    
+    <!-- Module Styles -->
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+
+<body>
+
+    <div id="app">
+
+        <!-- Navigation Back -->
+        <a href="../../index.html" class="nav-back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Back to Home
+        </a>
+
+        <!-- MENU SCREEN -->
+        <div id="menu-screen">
+            <h1>Mind State Lab</h1>
+            <p class="subtitle">Select a diagnostic tool to analyze your mental state</p>
+            
+            <div class="lab-actions">
+                <button class="btn-lab-action" onclick="LabHistory.show()">
+                    📊 View History
+                </button>
+                <button class="btn-lab-action" onclick="LabHistory.exportData()">
+                    📥 Export Data
+                </button>
+            </div>
+
+            <div class="grid-container">
+                <div class="test-card" onclick="App.startTest('orb')">
+                    <h3>Focus Orb</h3>
+                    <p>Keep your mouse inside the moving orb. Measures Sustained Attention.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('circle')">
+                    <h3>Zen Circle</h3>
+                    <p>Trace the circle slowly and perfectly. Measures Motor Stability.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('impulse')">
+                    <h3>Don't Click</h3>
+                    <p>Resist the fake triggers. Measures Impulse Control.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('steady')">
+                    <h3>Microscope</h3>
+                    <p>Hold your hand absolutely still. Measures Nervous Tension.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('breath')">
+                    <h3>Breath Sync</h3>
+                    <p>Match your keypresses to the rhythm. Measures Mind-Body Sync.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('vigilance')">
+                    <h3>Vigilance</h3>
+                    <p>React instantly when a light flashes. Measures Alertness.</p>
+                </div>
+                <div class="test-card" onclick="App.startTest('grounding')">
+                    <h3>Grounding</h3>
+                    <p>5-4-3-2-1 Anxiety Relief Technique. Calms the mind.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME INTERFACE -->
+        <div id="game-interface">
+            <div class="hud">
+                <div id="hud-timer">30s</div>
+                <button class="btn-quit" onclick="App.returnToMenu()">Quit Test</button>
+            </div>
+
+            <!-- Dynamic Containers -->
+            <div id="test-container"></div>
+            <canvas id="game-canvas-layer"></canvas>
+        </div>
+
+        <!-- RESULTS MODAL -->
+        <div id="result-modal">
+            <div class="result-content">
+                <div class="score-big" id="res-score">85%</div>
+                <div class="score-label" id="res-title">Balanced Mind</div>
+                <p class="score-desc" id="res-desc">Your focus was good, but you had minor lapses.</p>
+                <button class="btn" onclick="App.returnToMenu()">Back to Menu</button>
+            </div>
+        </div>
+        
+        <!-- HISTORY MODAL -->
+        <div id="history-modal" class="history-modal">
+            <div class="history-content">
+                <div class="history-header">
+                    <h2>📊 Test History</h2>
+                    <button class="btn-close" onclick="LabHistory.hide()">✕</button>
+                </div>
+                <div class="history-body" id="history-body">
+                    <!-- History items will be rendered here -->
+                </div>
+                <div class="history-footer">
+                    <button class="btn-secondary" onclick="LabHistory.clearAll()">🗑️ Clear All</button>
+                    <button class="btn" onclick="LabHistory.exportData()">📥 Download JSON</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <style>
+        .lab-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        
+        .btn-lab-action {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn-lab-action:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #38bdf8;
+        }
+        
+        .history-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .history-modal.active {
+            display: flex;
+        }
+        
+        .history-content {
+            background: #1a1a2e;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow: hidden;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .history-header h2 {
+            margin: 0;
+            color: #38bdf8;
+        }
+        
+        .btn-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .btn-close:hover {
+            color: #fff;
+        }
+        
+        .history-body {
+            padding: 20px;
+            max-height: 50vh;
+            overflow-y: auto;
+        }
+        
+        .history-test {
+            margin-bottom: 20px;
+        }
+        
+        .history-test-name {
+            color: #38bdf8;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-best {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .history-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-item-score {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        
+        .history-item-date {
+            color: #888;
+            font-size: 0.8rem;
+        }
+        
+        .history-empty {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+        
+        .history-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-secondary {
+            background: rgba(248, 113, 113, 0.2);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            color: #f87171;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(248, 113, 113, 0.3);
+        }
+    </style>
+
+    <!-- Common Utilities -->
+    <script src="../../assets/js/common.js"></script>
+    <script src="../../assets/js/firebase-config.js"></script>
+    <script src="../../assets/js/notifications.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    
+    <!-- Module Scripts -->
+    <script src="app.js"></script>
+</body>
+
+</html>

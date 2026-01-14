@@ -1,0 +1,39 @@
+# Implementation Plan - Mindstate Games Fixes & Updates
+
+## Goal
+Fix technical issues (aggressive cleanup, event handling) and improve the user experience (visual feedback, polish) of the Mindstate Games single-page application.
+
+## User Review Required
+> [!IMPORTANT]
+> I will be refactoring the `App` object to include a `timeouts` array. This replaces the current "clear all timeouts" hack.
+
+## Proposed Changes
+
+### Core Logic ([Mindstate_Games.html](file:///d:/Manideep/Personal%20Singlepage%20Html/Mindstate_Games.html))
+
+#### [MODIFY] [Mindstate_Games.html](file:///d:/Manideep/Personal%20Singlepage%20Html/Mindstate_Games.html)
+- **App Object**:
+    - Add `timeouts: []` to store active timeout IDs.
+    - Add `setTimeout(fn, delay)` wrapper to push IDs to the array.
+    - Update [cleanup()](file:///d:/Manideep/Personal%20Singlepage%20Html/Mindstate_Games.html#808-812) to clear only tracked timeouts and intervals.
+    - Add `resize` event listener to handle canvas resizing.
+- **Breath Sync Test**:
+    - Update [keydown](file:///d:/Manideep/Personal%20Singlepage%20Html/Mindstate_Games.html#775-776) handler to `e.preventDefault()` when Space is pressed to prevent scrolling.
+- **Impulse Test**:
+    - Clean up the "Safe Trigger" logic.
+    - Ensure `state` is reset correctly.
+- **Vigilance Test**:
+    - Improve visual feedback on click (e.g., flash effect).
+
+### Visual Updates
+- **CSS**:
+    - Add transitions for smoother UI interactions.
+    - Improve "Game Over" / Results modal appearance.
+
+## Verification Plan
+
+### Manual Verification
+- **Breath Sync**: Open game, press Space. Verify page does not scroll.
+- **Impulse**: Play game, verify "Safe" vs "Danger" logic works and doesn't bug out.
+- **Navigation**: Start a game, then "Quit". Start another. Verify no weird behavior (double speed, lingering elements).
+- **Resize**: Resize window during "Zen Circle" or "Orb". Verify canvas updates or game handles it gracefully.

@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>कृष्ण Workspace - Conscious Practice</title>
+    <link rel="icon" type="image/png" href="../../assets/images/favicon.png">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Firebase SDK (compat versions for non-module scripts) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Common Styles -->
+    <link rel="stylesheet" href="../../assets/css/notifications.css">
+    <link rel="stylesheet" href="../../assets/css/auth.css">
+    
+    <!-- Module Styles -->
+    <link rel="stylesheet" href="../../assets/css/workspace.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* ===== REVAMPED WORKSPACE STYLES ===== */
+        
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            padding: 10px 0;
+        }
+        
+        .dashboard-card {
+            background: var(--card-bg, rgba(30, 30, 40, 0.6));
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--border, rgba(255,255,255,0.08));
+            backdrop-filter: blur(10px);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .card-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-dim, #a0a0a0);
+            font-weight: 500;
+        }
+        
+        .score-badge {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        /* Ritual Checklist */
+        .ritual-checklist {
+            display: grid;
+            gap: 10px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        
+        .ritual-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .ritual-item:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: var(--accent, #f59e0b);
+        }
+        
+        .ritual-item.completed {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .ritual-item.completed .ritual-name {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+        
+        .ritual-emoji {
+            font-size: 1.4rem;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+        
+        .ritual-info {
+            flex: 1;
+        }
+        
+        .ritual-name {
+            font-weight: 500;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+        
+        .ritual-time {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        
+        .ritual-check {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: transparent;
+            transition: all 0.2s;
+        }
+        
+        .ritual-item.completed .ritual-check {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+        
+        .btn-link {
+            background: none;
+            border: none;
+            color: var(--accent, #f59e0b);
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 8px 0;
+            margin-top: 10px;
+        }
+        
+        .btn-link:hover {
+            text-decoration: underline;
+        }
+        
+        /* Garden Grid */
+        .garden-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        
+        .garden-cell {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .garden-cell:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+        
+        .garden-cell.completed {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        
+        .garden-cell.partial {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        .garden-legend {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .legend-item .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+        
+        .legend-item .dot.completed {
+            background: #10b981;
+        }
+        
+        .legend-item .dot.partial {
+            background: #f59e0b;
+        }
+        
+        /* Quick Nectar Card */
+        .nectar-card textarea {
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            color: #fff;
+            font-size: 0.9rem;
+            resize: none;
+            font-family: inherit;
+        }
+        
+        .nectar-card textarea::placeholder {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+        
+        .btn-primary.btn-sm {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+        
+        /* Timer Card Mini */
+        .mini-timer {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(217, 70, 239, 0.1));
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .mini-timer:hover {
+            transform: scale(1.02);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(217, 70, 239, 0.2));
+        }
+        
+        .mini-timer span:first-child {
+            display: block;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .timer-hint {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: 5px;
+        }
+        
+        .quick-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat span {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .stat label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        
+        /* Journal Container */
+        .journal-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .journal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .date-nav {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .date-nav button {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .date-nav button:hover {
+            background: var(--accent);
+        }
+        
+        .date-nav span {
+            color: var(--accent);
+            font-weight: 500;
+            min-width: 120px;
+            text-align: center;
+        }
+        
+        .journal-form {
+            background: var(--card-bg, rgba(30, 30, 40, 0.6));
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+        }
+        
+        .journal-field {
+            margin-bottom: 20px;
+        }
+        
+        .journal-field label {
+            display: block;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .journal-field textarea {
+            width: 100%;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            color: #fff;
+            font-size: 0.95rem;
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+        }
+        
+        .journal-history h3 {
+            color: var(--text-dim);
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+        
+        .journal-entry {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 3px solid var(--accent);
+        }
+        
+        .journal-entry-date {
+            font-size: 0.8rem;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+        
+        .journal-entry-nectar {
+            color: #fff;
+            font-style: italic;
+            margin-bottom: 8px;
+        }
+        
+        .journal-entry-notes {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--bg, #1a1a2e);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: #fff;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            color: var(--danger, #ef4444);
+        }
+        
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(80vh - 60px);
+        }
+        
+        /* Ritual Manager Modal */
+        .add-ritual-form {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .add-ritual-form input,
+        .add-ritual-form select {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .add-ritual-form input[type="number"] {
+            width: 80px;
+        }
+        
+        .ritual-list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .ritual-list-item-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-delete {
+            background: none;
+            border: none;
+            color: var(--danger, #ef4444);
+            cursor: pointer;
+            font-size: 1.2rem;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        
+        .btn-delete:hover {
+            opacity: 1;
+        }
+        
+        /* Mood tracker improvements */
+        .mood-description {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        
+        .mood-tracker {
+            background: var(--card-bg, rgba(30, 30, 40, 0.6));
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .mood-tracker p {
+            color: var(--text-dim);
+            margin-bottom: 15px;
+        }
+        
+        .mood-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .mood-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 15px;
+            background: rgba(255,255,255,0.03);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .mood-btn:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: var(--mood, #ec4899);
+            transform: translateY(-3px);
+        }
+        
+        .mood-emoji {
+            font-size: 2rem;
+        }
+        
+        .mood-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+        
+        .mood-tracker input {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .mood-chart-container {
+            background: var(--card-bg, rgba(30, 30, 40, 0.6));
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-danger {
+            background: transparent;
+            border: 1px solid var(--danger, #ef4444);
+            color: var(--danger, #ef4444);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-danger:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        /* Timer presets */
+        .timer-presets {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .preset-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+        
+        .preset-btn:hover,
+        .preset-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+        }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-dim);
+        }
+        
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        /* Responsive fixes */
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .add-ritual-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .mood-buttons {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- XP POPUP -->
+    <div id="xp-popup">+50 Bhakti Points! 🙏</div>
+
+    <!-- NAV -->
+    <nav>
+        <div class="nav-item" onclick="window.location.href='../../index.html'" data-tooltip="Home">
+            <i class="fas fa-home" style="color: var(--accent)"></i>
+        </div>
+        <div class="nav-item active" onclick="switchView('view-dashboard')" data-tooltip="Dashboard">
+            <i class="fas fa-th-large" style="color: var(--accent)"></i>
+        </div>
+        <div class="nav-item" onclick="switchView('view-focus')" data-tooltip="Focus Timer">
+            <i class="fas fa-om" style="color: var(--focus)"></i>
+        </div>
+        <div class="nav-item" onclick="switchView('view-journal')" data-tooltip="Nectar Journal">
+            <i class="fas fa-book-open" style="color: var(--thought)"></i>
+        </div>
+        <div class="nav-item" onclick="switchView('view-mood')" data-tooltip="Bhakti Meter">
+            <i class="fas fa-heart" style="color: var(--mood)"></i>
+        </div>
+
+        <!-- Link to Diagnostic Lab
+        <a href="Mindstate_Games.html" class="nav-item" data-tooltip="Diagnostic Lab">
+            <i class="fas fa-flask" style="color: #38bdf8"></i>
+        </a> -->
+
+        <div style="margin-top: auto; margin-bottom: 20px;">
+            <div class="nav-item" onclick="handleSignout()" data-tooltip="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main>
+        <header>
+            <div class="level-container">
+                <div class="level-badge" id="user-level" style="background: linear-gradient(135deg, #8b5cf6, #d946ef);">🙏 L1</div>
+                <div class="xp-bar-bg">
+                    <div class="xp-bar-fill" id="xp-fill" style="background: linear-gradient(90deg, #8b5cf6, #d946ef);"></div>
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-dim)" id="xp-text">0 / 100 Bhakti Points</div>
+            </div>
+
+            <div class="app-status">
+                <div class="status-dot" id="conn-dot"></div>
+                <span id="conn-text">Disconnected</span>
+            </div>
+        </header>
+
+        <!-- 1. DASHBOARD VIEW (New Main View) -->
+        <div id="view-dashboard" class="view-section active">
+            <div class="dashboard-grid">
+                <!-- Today's Sadhana Card -->
+                <div class="dashboard-card sadhana-card">
+                    <div class="card-header">
+                        <h3>🙏 Today's Sadhana</h3>
+                        <span id="dailyScore" class="score-badge">0%</span>
+                    </div>
+                    <div id="ritualChecklist" class="ritual-checklist">
+                        <!-- Populated by JS -->
+                    </div>
+                    <button onclick="openRitualManager()" class="btn-link">⚙️ Manage Rituals</button>
+                </div>
+
+                <!-- Quick Timer Card -->
+                <div class="dashboard-card timer-card">
+                    <div class="card-header">
+                        <h3>⏱️ Focus Timer</h3>
+                    </div>
+                    <div class="mini-timer" onclick="switchView('view-focus')">
+                        <span id="mini-timer-display">25:00</span>
+                        <span class="timer-hint">Click to start a session</span>
+                    </div>
+                    <div class="quick-stats">
+                        <div class="stat">
+                            <span id="sessions-today">0</span>
+                            <label>Sessions Today</label>
+                        </div>
+                        <div class="stat">
+                            <span id="streak-days">0</span>
+                            <label>Day Streak</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Garden Visualization -->
+                <div class="dashboard-card garden-card">
+                    <div class="card-header">
+                        <h3>🌱 Spiritual Garden</h3>
+                        <span class="garden-legend">
+                            <span class="legend-item"><span class="dot completed"></span>Done</span>
+                            <span class="legend-item"><span class="dot partial"></span>Note</span>
+                        </span>
+                    </div>
+                    <div id="gardenGrid" class="garden-grid">
+                        <!-- 42 days grid populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Quick Nectar -->
+                <div class="dashboard-card nectar-card">
+                    <div class="card-header">
+                        <h3>✨ Today's Nectar</h3>
+                    </div>
+                    <textarea id="quickNectar" placeholder="What touched your heart today?" rows="3"></textarea>
+                    <button onclick="saveQuickNectar()" class="btn-primary btn-sm">Save Nectar (+15 Bhakti)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. FOCUS TIMER VIEW -->
+        <div id="view-focus" class="view-section">
+            <div class="focus-container">
+                <div class="timer-box">
+                    <h3 style="color:var(--text-dim); margin-bottom:10px">🕉️ SADHANA (Spiritual Practice)</h3>
+                    <div class="active-task-label" id="active-task-name">Begin your practice →</div>
+                    <div class="time-display" id="timer-display">25:00</div>
+
+                    <div style="display:flex; gap:15px; margin-top:30px; justify-content: center;">
+                        <button class="btn-primary" onclick="toggleTimer()" id="timer-btn">START SADHANA</button>
+                        <button style="background:transparent; border:1px solid var(--border); color:white; padding: 10px 20px; border-radius: 8px; cursor: pointer;"
+                            onclick="resetTimer()">RESET</button>
+                    </div>
+
+                    <!-- Timer Presets -->
+                    <div class="timer-presets">
+                        <button onclick="setTimer(15)" class="preset-btn">15m</button>
+                        <button onclick="setTimer(25)" class="preset-btn active" id="preset-25">25m</button>
+                        <button onclick="setTimer(45)" class="preset-btn">45m</button>
+                        <button onclick="setTimer(60)" class="preset-btn">1h</button>
+                    </div>
+
+                    <!-- Soundscapes -->
+                    <div class="ambience-controls">
+                        <div class="sound-btn" onclick="toggleSound('rain', this)" title="Rain"><i class="fas fa-cloud-rain"></i></div>
+                        <div class="sound-btn" onclick="toggleSound('fire', this)" title="Fire"><i class="fas fa-fire"></i></div>
+                        <div class="sound-btn" onclick="toggleSound('temple', this)" title="Temple Bells"><i class="fas fa-bell"></i></div>
+                        <div class="sound-btn" onclick="toggleSound('nature', this)" title="Nature"><i class="fas fa-leaf"></i></div>
+                    </div>
+                    
+                    <!-- Ambient sounds -->
+                    <audio id="audio-rain" loop src="https://assets.mixkit.co/active_storage/sfx/212/212-preview.mp3"></audio>
+                    <audio id="audio-fire" loop src="https://assets.mixkit.co/active_storage/sfx/1/1-preview.mp3"></audio>
+                    <audio id="audio-temple" loop src="https://assets.mixkit.co/active_storage/sfx/2515/2515-preview.mp3"></audio>
+                    <audio id="audio-nature" loop src="https://assets.mixkit.co/active_storage/sfx/2425/2425-preview.mp3"></audio>
+
+                    <!-- Session History -->
+                    <div style="position: absolute; top: 20px; right: 20px; text-align: right;">
+                        <h5 style="margin:0; color:var(--text-dim)">Recent Sessions</h5>
+                        <div id="focus-history" class="session-history"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. JOURNAL VIEW -->
+        <div id="view-journal" class="view-section">
+            <div class="journal-container">
+                <div class="journal-header">
+                    <h2 style="color:var(--thought); margin:0;">📝 Nectar Journal</h2>
+                    <div class="date-nav">
+                        <button onclick="navigateJournalDate(-1)">←</button>
+                        <span id="journal-date">Today</span>
+                        <button onclick="navigateJournalDate(1)">→</button>
+                    </div>
+                </div>
+                
+                <div class="journal-form">
+                    <div class="journal-field">
+                        <label>✨ Nectar of the Day</label>
+                        <textarea id="journalNectar" placeholder="A verse, teaching, or moment that touched your heart..."></textarea>
+                    </div>
+                    <div class="journal-field">
+                        <label>📖 Reflections & Notes</label>
+                        <textarea id="journalNotes" placeholder="How was your practice today? Any realizations or challenges?"></textarea>
+                    </div>
+                    <button onclick="saveJournal()" class="btn-primary">💾 Save Entry (+20 Bhakti)</button>
+                </div>
+
+                <div class="journal-history">
+                    <h3>Recent Entries</h3>
+                    <div id="journal-entries"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. BHAKTI METER VIEW -->
+        <div id="view-mood" class="view-section">
+            <h2 style="color:var(--mood); margin-bottom: 5px;">🪷 Bhakti Meter</h2>
+            <p class="mood-description">Track your devotional connection throughout your spiritual journey</p>
+            
+            <div class="mood-tracker">
+                <p>How connected do you feel to your practice today?</p>
+                <div class="mood-buttons">
+                    <button onclick="logMood(1)" class="mood-btn" title="Disconnected">
+                        <span class="mood-emoji">😔</span>
+                        <span class="mood-label">Dry</span>
+                    </button>
+                    <button onclick="logMood(2)" class="mood-btn" title="Distracted">
+                        <span class="mood-emoji">😐</span>
+                        <span class="mood-label">Distracted</span>
+                    </button>
+                    <button onclick="logMood(3)" class="mood-btn" title="Present">
+                        <span class="mood-emoji">🙂</span>
+                        <span class="mood-label">Present</span>
+                    </button>
+                    <button onclick="logMood(4)" class="mood-btn" title="Connected">
+                        <span class="mood-emoji">😊</span>
+                        <span class="mood-label">Connected</span>
+                    </button>
+                    <button onclick="logMood(5)" class="mood-btn" title="Blissful">
+                        <span class="mood-emoji">🙏</span>
+                        <span class="mood-label">Blissful</span>
+                    </button>
+                </div>
+                <input id="mood-comment" type="text" placeholder="Brief note about your state (optional)">
+            </div>
+
+            <div class="mood-chart-container">
+                <canvas id="moodChart"></canvas>
+            </div>
+            
+            <div style="text-align: center;">
+                <button onclick="resetMoods()" class="btn-danger btn-sm">Reset Mood Data</button>
+            </div>
+            
+            <p style="color:var(--text-dim); font-size: 0.9rem; margin-top: 25px; text-align: center; font-style: italic;">
+                "The best offering to Krishna is your sincere devotion and effort." 🙏
+            </p>
+        </div>
+
+    </main>
+
+    <!-- RITUAL MANAGER MODAL -->
+    <div id="ritual-modal" class="modal" onclick="if(event.target===this)closeRitualManager()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Manage Rituals</h3>
+                <button onclick="closeRitualManager()" class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="add-ritual-form">
+                    <input id="newRitualName" type="text" placeholder="Ritual name (e.g., Japa)" maxlength="50">
+                    <input id="newRitualTime" type="number" placeholder="Min" min="1" max="180" style="width:70px;">
+                    <select id="newRitualEmoji">
+                        <option value="📿">📿</option>
+                        <option value="📖">📖</option>
+                        <option value="🙏">🙏</option>
+                        <option value="🧘">🧘</option>
+                        <option value="🎵">🎵</option>
+                        <option value="🍲">🍲</option>
+                        <option value="🌺">🌺</option>
+                        <option value="✍️">✍️</option>
+                        <option value="🎧">🎧</option>
+                        <option value="⭐">⭐</option>
+                    </select>
+                    <button onclick="addRitual()" class="btn-primary">Add</button>
+                </div>
+                <div id="ritual-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DAY DETAIL MODAL -->
+    <div id="day-modal" class="modal" onclick="if(event.target===this)closeDayModal()">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="day-modal-title">Day Details</h3>
+                <button onclick="closeDayModal()" class="modal-close">×</button>
+            </div>
+            <div id="day-modal-body" class="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Common Utilities -->
+    <script src="../../assets/js/common.js"></script>
+    <script src="../../assets/js/firebase-config.js"></script>
+    <script src="../../assets/js/notifications.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    
+    <!-- Module Scripts -->
+    <script src="workspace.js"></script>
+</body>
+
+</html>

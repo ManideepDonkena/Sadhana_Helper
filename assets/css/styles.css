@@ -1,0 +1,416 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;500;700&family=Inter:wght@300;400;600&display=swap');
+
+:root {
+    --bg: #0f172a;
+    --card-bg: #1e293b;
+    --text-main: #e2e8f0;
+    --text-dim: #94a3b8;
+    --accent: #38bdf8;
+    --success: #4ade80;
+    --danger: #f87171;
+    --warn: #facc15;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background-color: var(--bg);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* --- LAYOUT --- */
+#app {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* --- MENU SCREEN --- */
+#menu-screen {
+    text-align: center;
+    width: 100%;
+    max-width: 1000px;
+    padding: 20px;
+    animation: fadeIn 0.5s ease;
+}
+
+h1 {
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    font-size: 3rem;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, var(--accent), #fff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+    color: var(--text-dim);
+    margin-bottom: 40px;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.test-card {
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+    text-align: left;
+}
+
+.test-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+}
+
+.test-card h3 {
+    margin: 0 0 10px 0;
+    color: var(--accent);
+    font-family: 'Rajdhani';
+    font-size: 1.5rem;
+}
+
+.test-card p {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* --- GAME AREA --- */
+#game-interface {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    display: none;
+    /* Hidden by default */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#game-canvas-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.hud {
+    position: absolute;
+    top: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 40px;
+    z-index: 10;
+    font-family: 'Rajdhani';
+    font-size: 1.5rem;
+    pointer-events: none;
+}
+
+.btn-quit {
+    pointer-events: auto;
+    background: none;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    padding: 5px 15px;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+}
+
+.btn-quit:hover {
+    background: var(--danger);
+    color: white;
+    box-shadow: 0 0 15px rgba(248, 113, 113, 0.4);
+}
+
+/* --- RESULTS MODAL --- */
+#result-modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    backdrop-filter: blur(5px);
+}
+
+.result-content {
+    text-align: center;
+    background: var(--card-bg);
+    padding: 40px;
+    border-radius: 20px;
+    border: 2px solid var(--accent);
+    max-width: 500px;
+    box-shadow: 0 0 50px rgba(56, 189, 248, 0.2);
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.score-big {
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: 'Rajdhani';
+}
+
+.score-label {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.score-desc {
+    color: var(--text-dim);
+    margin-bottom: 30px;
+}
+
+.btn {
+    padding: 12px 30px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(56, 189, 248, 0.3);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* --- SPECIFIC TEST STYLES --- */
+
+/* 1. Orb */
+#orb-target {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.6) 0%, transparent 70%);
+    border: 1px solid var(--accent);
+    position: absolute;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 20px var(--accent);
+}
+
+/* 2. Impulse */
+#impulse-btn {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 4px solid var(--text-dim);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    font-weight: 700;
+}
+
+.impulse-danger {
+    border-color: var(--danger) !important;
+    color: var(--danger) !important;
+    background: rgba(248, 113, 113, 0.1) !important;
+    box-shadow: 0 0 30px var(--danger);
+}
+
+.impulse-safe {
+    border-color: var(--success) !important;
+    color: var(--success) !important;
+    background: rgba(74, 222, 128, 0.1) !important;
+    box-shadow: 0 0 30px var(--success);
+}
+
+/* 3. Breath */
+#breath-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent), transparent);
+    opacity: 0.5;
+}
+
+#breath-guide {
+    position: absolute;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.instruction-text {
+    margin-top: 350px;
+    color: var(--text-dim);
+}
+
+/* 4. Vigilance */
+#grid-container {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-template-rows: repeat(3, 100px);
+    gap: 10px;
+}
+
+.grid-box {
+    background: #334155;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.grid-box.active {
+    background: #fff;
+    box-shadow: 0 0 20px #fff;
+}
+
+/* 5. Steadiness */
+#steady-zone {
+    width: 40px;
+    height: 40px;
+    border: 2px dashed var(--text-dim);
+    border-radius: 50%;
+    position: absolute;
+}
+
+#steady-cursor {
+    width: 10px;
+    height: 10px;
+    background: var(--danger);
+    border-radius: 50%;
+    position: absolute;
+    pointer-events: none;
+    display: none;
+}
+
+/* 6. Grounding */
+.grounding-container {
+    text-align: center;
+    max-width: 600px;
+    animation: fadeIn 1s ease;
+}
+
+.grounding-step {
+    font-size: 4rem;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: 'Rajdhani';
+    margin-bottom: 10px;
+}
+
+.grounding-instr {
+    font-size: 1.5rem;
+    color: var(--text-main);
+    margin-bottom: 40px;
+    min-height: 60px;
+}
+
+.btn-grounding {
+    padding: 20px 50px;
+    font-size: 1.2rem;
+    background: transparent;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-grounding:hover {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 0 30px rgba(56, 189, 248, 0.4);
+    transform: scale(1.05);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes popIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Navigation */
+.nav-back {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.2s;
+    z-index: 50;
+}
+
+.nav-back:hover {
+    color: var(--accent);
+}
