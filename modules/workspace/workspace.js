@@ -51,11 +51,23 @@ let appData = {
     ashramLevel: 1,
     focusSessions: [],
     streakDays: 0,
-    lastActivityDate: null
+    lastActivityDate: null,
+    // New sadhana-integrated fields
+    myRituals: [
+        { id: 101, name: "Chanting (Japa)", time: 16, emoji: "📿" },
+        { id: 102, name: "Reading", time: 15, emoji: "📖" }
+    ],
+    dailyLogs: {},
+    journal: []
 };
+
+// Get today's date key
+const TODAY_KEY = new Date().toISOString().split('T')[0];
+let currentJournalDate = TODAY_KEY;
 
 let timerInterval = null;
 let timeLeft = 25 * 60;
+let selectedTimerDuration = 25;
 let isTimerRunning = false;
 let chartInstance = null;
 let isDataLoading = true;
@@ -102,13 +114,16 @@ async function initializeWorkspaceOffline() {
     const localData = localStorage.getItem('workspace_data');
     if (localData) {
         try {
-            appData = JSON.parse(localData);
+            appData = { ...appData, ...JSON.parse(localData) };
         } catch(e) {}
     }
     
+    // Ensure today's log exists
+    ensureTodayLog();
+    
     updateStatus(false);
     updateXPUI();
-    renderData();
+    renderDashboard();
     renderMoodChart();
     renderFocusHistory();
 }
