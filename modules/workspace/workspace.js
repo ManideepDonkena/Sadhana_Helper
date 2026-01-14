@@ -376,6 +376,8 @@ function updateXPUI() {
     const xpFill = document.getElementById('xp-fill');
     const xpText = document.getElementById('xp-text');
     
+    if (!levelBadge || !xpFill || !xpText) return;
+    
     const levelTexts = [
         "🙏 L1", "🧘 L2", "⚡ L3", "📖 L4", "❤️ L5"
     ];
@@ -395,91 +397,394 @@ function updateXPUI() {
     xpText.textContent = `${Math.floor(pointsIntoLevel)} / ${pointsNeededForLevel} Bhakti Points`;
 }
 
-// ========== ENTRIES (Thoughts, Resources, Moods) ==========
-async function addEntry(type) {
-    let entry = null;
+// ========== RITUAL CHECKLIST ==========
+function renderRitualChecklist() {
+    const container = document.getElementById('ritualChecklist');
+    if (!container) return;
     
-    if (type === 'thought') {
-        const content = document.getElementById('thought-input').value.trim();
-        if (!content) return Toast.show("Please share your insight", "warning");
-        
-        entry = {
-            id: Date.now().toString(),
-            content,
-            timestamp: new Date().toISOString(),
-            type: 'thought'
-        };
-        appData.thoughts.push(entry);
-        document.getElementById('thought-input').value = '';
-        
-        await gainBhaktiPoints(20, "Recording a spiritual insight");
-        
-    } else if (type === 'resource') {
-        const url = document.getElementById('res-url').value.trim();
-        const title = document.getElementById('res-title').value.trim();
-        const tag = document.getElementById('res-tag').value;
-        
-        if (!url || !title) return Toast.show("Please fill in chapter and verse", "warning");
-        
-        entry = {
-            id: Date.now().toString(),
-            url,
-            title,
-            tag,
-            timestamp: new Date().toISOString(),
-            type: 'resource'
-        };
-        appData.resources.push(entry);
-        document.getElementById('res-url').value = '';
-        document.getElementById('res-title').value = '';
-        
-        await gainBhaktiPoints(10, "Adding a Divine Teaching");
+    const log = appData.dailyLogs[TODAY_KEY] || { completedIds: [], nectar: "", notes: "" };
+    
+    if (!appData.myRituals || appData.myRituals.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-om"></i>
+                <p>No rituals yet. Add your daily practices!</p>
+            </div>
+        `;
+        updateDailyScore(0);
+        return;
+    }
+    
+    container.innerHTML = appData.myRituals.map(ritual => {
+        const isCompleted = log.completedIds.includes(ritual.id);
+        return `
+            <div class="ritual-item ${isCompleted ? 'completed' : ''}" onclick="toggleRitual(${ritual.id})">
+                <div class="ritual-emoji">${ritual.emoji}</div>
+                <div class="ritual-info">
+                    <div class="ritual-name">${escapeHTML(ritual.name)}</div>
+                    <div class="ritual-time">${ritual.time} mins</div>
+                </div>
+                <div class="ritual-check">✓</div>
+            </div>
+        `;
+    }).join('');
+    
+    // Update score
+    const pct = Math.round((log.completedIds.length / appData.myRituals.length) * 100);
+    updateDailyScore(pct);
+}
+
+function updateDailyScore(pct) {
+    const scoreEl = document.getElementById('dailyScore');
+    if (scoreEl) scoreEl.textContent = `${pct}%`;
+}
+
+async function toggleRitual(ritualId) {
+    ensureTodayLog();
+    const log = appData.dailyLogs[TODAY_KEY];
+    const idx = log.completedIds.indexOf(ritualId);
+    
+    if (idx > -1) {
+        // Uncomplete
+        log.completedIds.splice(idx, 1);
+    } else {
+        // Complete
+        log.completedIds.push(ritualId);
+        const ritual = appData.myRituals.find(r => r.id === ritualId);
+        if (ritual) {
+            Toast?.show?.(`${ritual.name} completed! 🙏`, "success");
+            await gainBhaktiPoints(10, `Completing ${ritual.name}`);
+        }
     }
     
     await saveUserData();
-    renderData();
+    renderRitualChecklist();
+    renderGarden();
 }
 
-function deleteEntry(id, type) {
-    if (type === 'thought') {
-        appData.thoughts = appData.thoughts.filter(t => t.id !== id);
-    } else if (type === 'resource') {
-        appData.resources = appData.resources.filter(r => r.id !== id);
-    }
-    saveUserData();
-    renderData();
+// ========== RITUAL MANAGER MODAL ==========
+function openRitualManager() {
+    document.getElementById('ritual-modal').classList.add('active');
+    renderRitualList();
 }
 
-function renderData() {
-    // Render thoughts
-    const thoughtsGrid = document.getElementById('thoughts-grid');
-    thoughtsGrid.innerHTML = appData.thoughts.map(t => `
-        <div class="grid-item">
-            <div class="grid-item-header">
-                <span style="font-size:0.8rem; color:var(--text-dim);">${new Date(t.timestamp).toLocaleDateString()}</span>
-                <button onclick="deleteEntry('${t.id}', 'thought')" style="background:none; color:var(--danger); border:none; cursor:pointer;">×</button>
-            </div>
-            <div class="grid-item-content">${t.content}</div>
-        </div>
-    `).join('');
+function closeRitualManager() {
+    document.getElementById('ritual-modal').classList.remove('active');
+}
+
+function renderRitualList() {
+    const container = document.getElementById('ritual-list');
+    if (!container) return;
     
-    // Render resources
-    const resourcesGrid = document.getElementById('resources-grid');
-    resourcesGrid.innerHTML = appData.resources.map(r => `
-        <div class="grid-item" style="border-left: 4px solid var(--resource);">
-            <div class="grid-item-header">
-                <span style="color:var(--text-dim); font-size:0.8rem;">${r.tag}</span>
-                <button onclick="deleteEntry('${r.id}', 'resource')" style="background:none; color:var(--danger); border:none; cursor:pointer;">×</button>
+    if (!appData.myRituals || appData.myRituals.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-dim); text-align:center;">No rituals added yet.</p>';
+        return;
+    }
+    
+    container.innerHTML = appData.myRituals.map(r => `
+        <div class="ritual-list-item">
+            <div class="ritual-list-item-info">
+                <span style="font-size:1.2rem;">${r.emoji}</span>
+                <span>${escapeHTML(r.name)}</span>
+                <span style="color:var(--text-dim); font-size:0.8rem;">(${r.time}m)</span>
             </div>
-            <div class="grid-item-title">${r.url}</div>
-            <div class="grid-item-content">${r.title}</div>
+            <button class="btn-delete" onclick="deleteRitual(${r.id})">×</button>
         </div>
     `).join('');
+}
+
+async function addRitual() {
+    const nameInput = document.getElementById('newRitualName');
+    const timeInput = document.getElementById('newRitualTime');
+    const emojiSelect = document.getElementById('newRitualEmoji');
+    
+    const name = nameInput.value.trim();
+    const time = parseInt(timeInput.value) || 10;
+    const emoji = emojiSelect.value;
+    
+    if (!name) {
+        Toast?.show?.("Please enter a ritual name", "warning");
+        return;
+    }
+    
+    if (!appData.myRituals) appData.myRituals = [];
+    
+    appData.myRituals.push({
+        id: Date.now(),
+        name: name.substring(0, 50),
+        time: Math.min(Math.max(time, 1), 180),
+        emoji
+    });
+    
+    nameInput.value = '';
+    timeInput.value = '';
+    
+    await saveUserData();
+    renderRitualList();
+    renderRitualChecklist();
+    Toast?.show?.("Ritual added!", "success");
+}
+
+async function deleteRitual(ritualId) {
+    if (!confirm("Remove this ritual?")) return;
+    
+    appData.myRituals = appData.myRituals.filter(r => r.id !== ritualId);
+    await saveUserData();
+    renderRitualList();
+    renderRitualChecklist();
+    Toast?.show?.("Ritual removed", "info");
+}
+
+// ========== GARDEN VISUALIZATION ==========
+function renderGarden() {
+    const grid = document.getElementById('gardenGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = '';
+    const today = new Date();
+    
+    // Last 42 days (6 weeks)
+    for (let i = 41; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        const log = appData.dailyLogs?.[key];
+        
+        const cell = document.createElement('div');
+        cell.className = 'garden-cell';
+        cell.title = formatDate(key);
+        cell.onclick = () => showDayDetail(key);
+        
+        if (log) {
+            const hasRitual = log.completedIds && log.completedIds.length > 0;
+            const hasNote = (log.nectar && log.nectar.trim()) || (log.notes && log.notes.trim());
+            
+            if (hasRitual) {
+                cell.classList.add('completed');
+            } else if (hasNote) {
+                cell.classList.add('partial');
+            }
+        }
+        
+        grid.appendChild(cell);
+    }
+}
+
+function showDayDetail(dateKey) {
+    const modal = document.getElementById('day-modal');
+    const title = document.getElementById('day-modal-title');
+    const body = document.getElementById('day-modal-body');
+    
+    title.textContent = formatDate(dateKey);
+    
+    const log = appData.dailyLogs?.[dateKey];
+    
+    if (!log || (!log.completedIds?.length && !log.nectar && !log.notes)) {
+        body.innerHTML = '<p style="color:var(--text-dim); font-style:italic;">No activity recorded for this day.</p>';
+    } else {
+        let html = '';
+        
+        // Completed rituals
+        if (log.completedIds?.length > 0) {
+            html += '<div style="margin-bottom:15px;"><h4 style="color:var(--text-dim); margin-bottom:10px;">Completed:</h4>';
+            log.completedIds.forEach(id => {
+                const ritual = appData.myRituals?.find(r => r.id === id);
+                if (ritual) {
+                    html += `<div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;"><span>${ritual.emoji}</span><span>${escapeHTML(ritual.name)}</span></div>`;
+                }
+            });
+            html += '</div>';
+        }
+        
+        // Nectar
+        if (log.nectar?.trim()) {
+            html += `<div style="background:rgba(245,158,11,0.1); padding:12px; border-radius:8px; margin-bottom:10px;">
+                <span style="color:var(--accent); font-size:0.75rem; text-transform:uppercase; font-weight:600;">Nectar</span>
+                <p style="color:#fff; font-style:italic; margin-top:5px;">"${escapeHTML(log.nectar)}"</p>
+            </div>`;
+        }
+        
+        // Notes
+        if (log.notes?.trim()) {
+            html += `<div style="background:rgba(255,255,255,0.03); padding:12px; border-radius:8px;">
+                <span style="color:var(--text-dim); font-size:0.75rem; text-transform:uppercase; font-weight:600;">Notes</span>
+                <p style="color:var(--text-dim); margin-top:5px;">${escapeHTML(log.notes)}</p>
+            </div>`;
+        }
+        
+        body.innerHTML = html;
+    }
+    
+    modal.classList.add('active');
+}
+
+function closeDayModal() {
+    document.getElementById('day-modal').classList.remove('active');
+}
+
+// ========== QUICK STATS ==========
+function renderQuickStats() {
+    // Sessions today
+    const todaySessions = appData.focusSessions?.filter(s => {
+        return s.timestamp?.startsWith(TODAY_KEY);
+    }).length || 0;
+    
+    const sessionsEl = document.getElementById('sessions-today');
+    if (sessionsEl) sessionsEl.textContent = todaySessions;
+    
+    // Streak calculation
+    const streakEl = document.getElementById('streak-days');
+    if (streakEl) streakEl.textContent = calculateStreak();
+    
+    // Mini timer display sync
+    updateMiniTimerDisplay();
+}
+
+function calculateStreak() {
+    let streak = 0;
+    const today = new Date();
+    
+    for (let i = 0; i < 365; i++) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        const log = appData.dailyLogs?.[key];
+        
+        if (log && log.completedIds?.length > 0) {
+            streak++;
+        } else if (i > 0) {
+            // Allow today to be incomplete
+            break;
+        }
+    }
+    
+    return streak;
+}
+
+function updateMiniTimerDisplay() {
+    const mini = document.getElementById('mini-timer-display');
+    if (mini) {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        mini.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+}
+
+// ========== QUICK NECTAR ==========
+async function saveQuickNectar() {
+    const input = document.getElementById('quickNectar');
+    const nectar = input.value.trim();
+    
+    if (!nectar) {
+        Toast?.show?.("Please write some nectar first", "warning");
+        return;
+    }
+    
+    ensureTodayLog();
+    appData.dailyLogs[TODAY_KEY].nectar = nectar.substring(0, 500);
+    
+    await gainBhaktiPoints(15, "Recording today's nectar");
+    await saveUserData();
+    
+    input.value = '';
+    renderGarden();
+    Toast?.show?.("Nectar saved! ✨", "success");
+}
+
+// ========== JOURNAL ==========
+function updateJournalDate() {
+    const dateEl = document.getElementById('journal-date');
+    if (dateEl) {
+        if (currentJournalDate === TODAY_KEY) {
+            dateEl.textContent = 'Today';
+        } else {
+            dateEl.textContent = formatDate(currentJournalDate);
+        }
+    }
+    
+    // Load journal content for this date
+    const log = appData.dailyLogs?.[currentJournalDate] || { nectar: '', notes: '' };
+    
+    const nectarInput = document.getElementById('journalNectar');
+    const notesInput = document.getElementById('journalNotes');
+    
+    if (nectarInput) nectarInput.value = log.nectar || '';
+    if (notesInput) notesInput.value = log.notes || '';
+}
+
+function navigateJournalDate(direction) {
+    const current = new Date(currentJournalDate);
+    current.setDate(current.getDate() + direction);
+    
+    const newKey = current.toISOString().split('T')[0];
+    
+    // Don't go into the future
+    if (newKey > TODAY_KEY) return;
+    
+    currentJournalDate = newKey;
+    updateJournalDate();
+}
+
+async function saveJournal() {
+    const nectar = document.getElementById('journalNectar')?.value.trim() || '';
+    const notes = document.getElementById('journalNotes')?.value.trim() || '';
+    
+    if (!nectar && !notes) {
+        Toast?.show?.("Please write something first", "warning");
+        return;
+    }
+    
+    if (!appData.dailyLogs) appData.dailyLogs = {};
+    if (!appData.dailyLogs[currentJournalDate]) {
+        appData.dailyLogs[currentJournalDate] = { completedIds: [], nectar: '', notes: '' };
+    }
+    
+    appData.dailyLogs[currentJournalDate].nectar = nectar.substring(0, 1000);
+    appData.dailyLogs[currentJournalDate].notes = notes.substring(0, 1000);
+    
+    await gainBhaktiPoints(20, "Journal entry");
+    await saveUserData();
+    
+    renderGarden();
+    renderJournalEntries();
+    Toast?.show?.("Journal saved! 📝", "success");
+}
+
+function renderJournalEntries() {
+    const container = document.getElementById('journal-entries');
+    if (!container) return;
+    
+    const entries = Object.keys(appData.dailyLogs || {})
+        .sort().reverse()
+        .filter(k => {
+            const l = appData.dailyLogs[k];
+            return (l.nectar && l.nectar.trim()) || (l.notes && l.notes.trim());
+        })
+        .slice(0, 5);
+    
+    if (entries.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-dim); font-style:italic;">No entries yet. Start journaling!</p>';
+        return;
+    }
+    
+    container.innerHTML = entries.map(k => {
+        const log = appData.dailyLogs[k];
+        return `
+            <div class="journal-entry">
+                <div class="journal-entry-date">${formatDate(k)}</div>
+                ${log.nectar ? `<div class="journal-entry-nectar">"${escapeHTML(log.nectar.substring(0, 100))}${log.nectar.length > 100 ? '...' : ''}"</div>` : ''}
+                ${log.notes ? `<div class="journal-entry-notes">${escapeHTML(log.notes.substring(0, 100))}${log.notes.length > 100 ? '...' : ''}</div>` : ''}
+            </div>
+        `;
+    }).join('');
 }
 
 // ========== MOOD TRACKING ==========
 async function logMood(level) {
-    const comment = document.getElementById('mood-comment').value.trim();
+    const commentEl = document.getElementById('mood-comment');
+    const comment = commentEl?.value.trim() || '';
+    
+    if (!appData.moods) appData.moods = [];
     
     const moodEntry = {
         id: Date.now().toString(),
@@ -489,13 +794,13 @@ async function logMood(level) {
     };
     
     appData.moods.push(moodEntry);
-    document.getElementById('mood-comment').value = '';
+    if (commentEl) commentEl.value = '';
     
     await gainBhaktiPoints(5, "Tracking devotional state");
     await saveUserData();
     
     renderMoodChart();
-    Toast.show("Bhakti level recorded! 🙏", "success");
+    Toast?.show?.("Bhakti level recorded! 🙏", "success");
 }
 
 function renderMoodChart() {
@@ -504,7 +809,7 @@ function renderMoodChart() {
     
     // Get last 30 days of moods
     const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-    const recentMoods = appData.moods.filter(m => new Date(m.timestamp) > thirtyDaysAgo);
+    const recentMoods = (appData.moods || []).filter(m => new Date(m.timestamp) > thirtyDaysAgo);
     
     // Aggregate by day
     const moodsByDay = {};
@@ -527,9 +832,9 @@ function renderMoodChart() {
         data: {
             labels,
             datasets: [{
-                label: 'Bhakti Level (Devotional Connection)',
+                label: 'Bhakti Level',
                 data: averages,
-                borderColor: 'var(--mood)',
+                borderColor: '#ec4899',
                 backgroundColor: 'rgba(236, 72, 153, 0.1)',
                 borderWidth: 2,
                 fill: true,
@@ -540,19 +845,19 @@ function renderMoodChart() {
             responsive: true,
             plugins: {
                 legend: {
-                    labels: { color: 'var(--text-dim)', font: { size: 12 } }
+                    labels: { color: '#888', font: { size: 12 } }
                 }
             },
             scales: {
                 y: {
                     min: 1,
                     max: 5,
-                    ticks: { color: 'var(--text-dim)' },
-                    grid: { color: 'var(--border)' }
+                    ticks: { color: '#888' },
+                    grid: { color: 'rgba(255,255,255,0.08)' }
                 },
                 x: {
-                    ticks: { color: 'var(--text-dim)' },
-                    grid: { color: 'var(--border)' }
+                    ticks: { color: '#888' },
+                    grid: { color: 'rgba(255,255,255,0.08)' }
                 }
             }
         }
@@ -564,11 +869,27 @@ function resetMoods() {
         appData.moods = [];
         saveUserData();
         renderMoodChart();
-        Toast.show("Mood data cleared", "info");
+        Toast?.show?.("Mood data cleared", "info");
     }
 }
 
 // ========== FOCUS / SADHANA TIMER ==========
+function setTimer(minutes) {
+    if (isTimerRunning) {
+        Toast?.show?.("Stop timer first to change duration", "warning");
+        return;
+    }
+    
+    selectedTimerDuration = minutes;
+    timeLeft = minutes * 60;
+    updateTimerDisplay();
+    updateMiniTimerDisplay();
+    
+    // Update active preset button
+    document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+    event?.target?.classList.add('active');
+}
+
 function toggleTimer() {
     const btn = document.getElementById('timer-btn');
     
@@ -584,6 +905,7 @@ function toggleTimer() {
             if (timeLeft > 0) {
                 timeLeft--;
                 updateTimerDisplay();
+                updateMiniTimerDisplay();
             } else {
                 completeFocusSession();
             }
@@ -593,45 +915,54 @@ function toggleTimer() {
 
 function resetTimer() {
     clearInterval(timerInterval);
-    timeLeft = 25 * 60;
+    timeLeft = selectedTimerDuration * 60;
     isTimerRunning = false;
     document.getElementById('timer-btn').textContent = 'START SADHANA';
     updateTimerDisplay();
+    updateMiniTimerDisplay();
 }
 
 function updateTimerDisplay() {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
-    document.getElementById('timer-display').textContent = 
-        `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    const display = document.getElementById('timer-display');
+    if (display) {
+        display.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
 }
 
 async function completeFocusSession() {
     clearInterval(timerInterval);
     isTimerRunning = false;
     
+    if (!appData.focusSessions) appData.focusSessions = [];
+    
     const session = {
         id: Date.now().toString(),
-        duration: 25,
+        duration: selectedTimerDuration,
         completed: true,
         timestamp: new Date().toISOString()
     };
     
     appData.focusSessions.push(session);
     
-    await gainBhaktiPoints(50, "Completing a 25-minute Sadhana session");
+    const points = Math.round(selectedTimerDuration * 2);
+    await gainBhaktiPoints(points, `Completing a ${selectedTimerDuration}-minute Sadhana session`);
     await saveUserData();
     
     resetTimer();
     renderFocusHistory();
+    renderQuickStats();
     
-    Toast.show("Sadhana Session Complete! 🙏", "success");
+    Toast?.show?.("Sadhana Session Complete! 🙏", "success");
     
     // Show motivational message
     const quotes = [
         "\"The mind is restless and difficult to control, but it is subdued by practice.\" - BG 6.35",
         "\"He who conquers his senses is superior to his body.\" - BG 3.42",
-        "\"Yoga is the journey of the self, through the self, to the self.\" - BG 6.20"
+        "\"Yoga is the journey of the self, through the self, to the self.\" - BG 6.20",
+        "\"A person can rise through the efforts of his own mind.\" - BG 6.5",
+        "\"Whatever action a great man performs, common men follow.\" - BG 3.21"
     ];
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
     
@@ -645,86 +976,100 @@ async function completeFocusSession() {
 
 function renderFocusHistory() {
     const history = document.getElementById('focus-history');
-    const recentSessions = appData.focusSessions.slice(-5).reverse();
+    if (!history) return;
+    
+    const recentSessions = (appData.focusSessions || []).slice(-5).reverse();
+    
+    if (recentSessions.length === 0) {
+        history.innerHTML = '<div style="font-size:0.8rem; color:var(--text-dim);">No sessions yet</div>';
+        return;
+    }
     
     history.innerHTML = recentSessions.map(s => 
-        `<div style="font-size:0.8rem; color:var(--text-dim);">✓ ${new Date(s.timestamp).toLocaleDateString()}</div>`
+        `<div style="font-size:0.8rem; color:var(--text-dim);">✓ ${s.duration}m - ${formatDate(s.timestamp.split('T')[0])}</div>`
     ).join('');
-}
-
-// ========== GOOGLE TASKS INTEGRATION ==========
-async function setupGoogleTasks() {
-    // Check if user has Google Account connected
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/tasks');
-    
-    try {
-        // Try to get Google credentials if user logged in with Google
-        if (currentUser.providerData.some(p => p.providerId === 'google.com')) {
-            const credential = await auth.currentUser.getIdTokenResult();
-            console.log("Google Tasks available for this user");
-            // Initialize Google Tasks API here if needed
-        }
-    } catch (error) {
-        console.log("Google Tasks not available:", error.message);
-    }
-}
-
-async function fetchGoogleTasks() {
-    Toast.show("Google Tasks integration coming soon", "info");
-}
-
-async function fetchTasksInList() {
-    // Placeholder for Google Tasks integration
-}
-
-async function createTask() {
-    // Placeholder for Google Tasks integration
 }
 
 // ========== SOUND & AMBIENCE ==========
 function toggleSound(soundType, element) {
     const audio = document.getElementById(`audio-${soundType}`);
+    if (!audio) return;
     
     if (audio.paused) {
         audio.play();
         element.style.opacity = '1';
+        element.style.background = 'var(--accent)';
     } else {
         audio.pause();
         audio.currentTime = 0;
         element.style.opacity = '0.5';
+        element.style.background = '';
     }
 }
 
 // ========== VIEW SWITCHING ==========
 function switchView(viewId) {
     document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-    document.getElementById(viewId).classList.add('active');
+    const targetView = document.getElementById(viewId);
+    if (targetView) targetView.classList.add('active');
     
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    event.target.closest('.nav-item')?.classList.add('active');
+    event?.target?.closest('.nav-item')?.classList.add('active');
+    
+    // Refresh relevant data when switching views
+    if (viewId === 'view-dashboard') {
+        renderDashboard();
+    } else if (viewId === 'view-journal') {
+        updateJournalDate();
+        renderJournalEntries();
+    } else if (viewId === 'view-mood') {
+        renderMoodChart();
+    }
 }
 
 // ========== UTILITY FUNCTIONS ==========
 function updateStatus(connected) {
     const dot = document.getElementById('conn-dot');
     const txt = document.getElementById('conn-text');
+    if (!dot || !txt) return;
+    
     if (connected) {
         dot.classList.add('connected');
         txt.innerText = "Synced with Krishna";
     } else {
         dot.classList.remove('connected');
-        txt.innerText = "Disconnected";
+        txt.innerText = "Offline Mode";
     }
+}
+
+function formatDate(dateStr) {
+    try {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+    } catch(e) {
+        return dateStr;
+    }
+}
+
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 function clearUI() {
     document.querySelectorAll('.view-section').forEach(v => {
-        v.querySelector('.grid-list')?.innerHTML = '';
+        const grid = v.querySelector('.grid-list');
+        if (grid) grid.innerHTML = '';
     });
 }
 
 // ========== EXPORT FOR TESTING ==========
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { addEntry, gainBhaktiPoints, logMood };
+    module.exports = { toggleRitual, gainBhaktiPoints, logMood, saveJournal };
 }
