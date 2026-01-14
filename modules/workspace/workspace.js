@@ -177,12 +177,12 @@ async function initializeWorkspace() {
         // Setup real-time listeners
         setupRealtimeListeners();
         
-        // Setup Google Tasks integration if available
-        await setupGoogleTasks();
+        // Ensure today's log exists
+        ensureTodayLog();
         
         // Render UI
         updateXPUI();
-        renderData();
+        renderDashboard();
         renderMoodChart();
         renderFocusHistory();
         
@@ -198,7 +198,15 @@ async function initializeWorkspace() {
         
     } catch (error) {
         console.error("Workspace initialization error:", error);
-        Toast.show("Failed to load workspace: " + error.message, "error");
+        Toast?.show?.("Failed to load workspace: " + error.message, "error");
+    }
+}
+
+// Helper to ensure today's daily log exists
+function ensureTodayLog() {
+    if (!appData.dailyLogs) appData.dailyLogs = {};
+    if (!appData.dailyLogs[TODAY_KEY]) {
+        appData.dailyLogs[TODAY_KEY] = { completedIds: [], nectar: "", notes: "" };
     }
 }
 
@@ -209,11 +217,13 @@ async function loadUserData() {
         const userDoc = await userRef.get();
         
         if (userDoc.exists) {
-            appData = userDoc.data() || appData;
+            const serverData = userDoc.data();
+            appData = { ...appData, ...serverData };
             console.log("User data loaded from Firestore");
         } else {
-            // First time user - initialize
+            // First time user - initialize with defaults
             appData = {
+                ...appData,
                 thoughts: [],
                 resources: [],
                 moods: [],
@@ -224,7 +234,13 @@ async function loadUserData() {
                 lastActivityDate: new Date().toISOString(),
                 createdAt: new Date(),
                 email: currentUser.email,
-                displayName: currentUser.displayName
+                displayName: currentUser.displayName,
+                myRituals: [
+                    { id: 101, name: "Chanting (Japa)", time: 16, emoji: "📿" },
+                    { id: 102, name: "Reading", time: 15, emoji: "📖" }
+                ],
+                dailyLogs: {},
+                journal: []
             };
             await saveUserData();
         }
@@ -237,17 +253,29 @@ async function loadUserData() {
 async function saveUserData() {
     if (isDataLoading) return;
     
+    // Always save to localStorage as backup
+    try {
+        localStorage.setItem('workspace_data', JSON.stringify(appData));
+    } catch(e) {
+        console.warn('localStorage save failed:', e);
+    }
+    
+    // Save to Firestore if available
+    if (!currentUser || !db) return;
+    
     try {
         const userRef = db.collection('users').doc(currentUser.uid);
         await userRef.set(appData, { merge: true });
         console.log("Data saved to Firestore");
     } catch (error) {
         console.error("Error saving data:", error);
-        Toast.show("Failed to save data", "error");
+        Toast?.show?.("Failed to save data", "error");
     }
 }
 
 function setupRealtimeListeners() {
+    if (!db || !currentUser) return;
+    
     // Listen for real-time updates from Firestore
     db.collection('users').doc(currentUser.uid)
         .onSnapshot((doc) => {
@@ -256,12 +284,21 @@ function setupRealtimeListeners() {
                 // Merge server data with local (server takes precedence)
                 appData = { ...appData, ...serverData };
                 updateXPUI();
-                renderData();
+                renderDashboard();
                 console.log("Real-time update received");
             }
         }, (error) => {
             console.error("Real-time listener error:", error);
         });
+}
+
+// ========== DASHBOARD RENDERING ==========
+function renderDashboard() {
+    renderRitualChecklist();
+    renderGarden();
+    renderQuickStats();
+    updateJournalDate();
+    renderJournalEntries();
 }
 
 // ========== GAMIFICATION - BHAKTI POINTS ==========
