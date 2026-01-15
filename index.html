@@ -89,6 +89,8 @@
             display: flex;
             align-items: center;
             gap: 20px;
+            position: relative;
+            z-index: 10001;
         }
 
         .nav-user-info {
@@ -162,6 +164,7 @@
             justify-content: center;
             cursor: pointer;
             position: relative;
+            z-index: 10002;
             transition: all 0.3s ease;
             font-size: 1.2rem;
         }
@@ -718,7 +721,7 @@
         </a>
         
         <div class="nav-right">
-            <button class="nav-notification-btn" onclick="NotificationCenter && NotificationCenter.toggle()" title="Notifications">
+            <button class="nav-notification-btn" id="nav-notification-btn" title="Notifications">
                 🔔
             </button>
             
@@ -1013,14 +1016,69 @@
                 const displayName = user.displayName || 'Seeker';
                 const photoURL = user.photoURL;
                 
-                let stats = { totalBhaktiPoints: 0, currentStreak: 0 };
+                // Load combined stats from all modules
+                let totalBhaktiPoints = 0;
+                let currentStreak = 0;
+                
+                // Try UserProfile stats first
                 if (typeof UserProfile !== 'undefined') {
-                    stats = await UserProfile.loadStats() || stats;
+                    const profileStats = await UserProfile.loadStats();
+                    if (profileStats) {
+                        totalBhaktiPoints = profileStats.totalBhaktiPoints || 0;
+                        currentStreak = profileStats.currentStreak || 0;
+                    }
                 }
                 
-                const level = SpiritualLevels && SpiritualLevels.getLevelForPoints ? SpiritualLevels.getLevelForPoints(stats.totalBhaktiPoints) : { name: 'Shravana' };
+                // Also try to load from individual modules via ModuleData
+                if (typeof ModuleData !== 'undefined') {
+                    try {
+                        // Workspace Bhakti Points
+                        const workspaceData = await ModuleData.get('workspace');
+                        if (workspaceData && workspaceData.bhaktiPoints) {
+                            totalBhaktiPoints = Math.max(totalBhaktiPoints, workspaceData.bhaktiPoints);
+                            if (workspaceData.streakDays) {
+                                currentStreak = Math.max(currentStreak, workspaceData.streakDays);
+                            }
+                        }
+                        
+                        // Gita XP (convert to bhakti points: 1 XP = 0.5 Bhakti)
+                        const gitaData = await ModuleData.get('gita');
+                        if (gitaData) {
+                            if (gitaData.stats && gitaData.stats.totalPoints) {
+                                totalBhaktiPoints += Math.floor(gitaData.stats.totalPoints * 0.5);
+                            } else if (gitaData.userProfile && gitaData.userProfile.points) {
+                                totalBhaktiPoints += Math.floor(gitaData.userProfile.points * 0.5);
+                            }
+                        }
+                        
+                        // Sadhana days completed adds to bhakti
+                        const sadhanaData = await ModuleData.get('sadhana');
+                        if (sadhanaData && sadhanaData.dailyLogs) {
+                            const completedDays = Object.values(sadhanaData.dailyLogs).filter(
+                                log => log.completedIds && log.completedIds.length > 0
+                            ).length;
+                            totalBhaktiPoints += completedDays * 10;
+                        }
+                    } catch(e) {
+                        console.warn('Error loading module stats:', e);
+                    }
+                }
                 
-                heroAuthSection.innerHTML = '<div class="hero-user-welcome"><div class="hero-user-avatar-large">' + (photoURL ? '<img src="' + photoURL + '" alt="' + displayName + '">' : '🙏') + '</div><div class="hero-user-greeting">Hare Krishna, <span class="name">' + (Sanitizer ? Sanitizer.escapeHTML(displayName) : displayName) + '</span>!</div><div class="hero-user-stats"><div class="hero-stat"><div class="hero-stat-value">' + (stats.totalBhaktiPoints || 0) + '</div><div class="hero-stat-label">Bhakti Points</div></div><div class="hero-stat"><div class="hero-stat-value">' + (stats.currentStreak || 0) + '</div><div class="hero-stat-label">Day Streak</div></div><div class="hero-stat"><div class="hero-stat-value">' + level.name + '</div><div class="hero-stat-label">Ashram Level</div></div></div></div>';
+                // Fallback to localStorage if no Firebase data
+                if (totalBhaktiPoints === 0) {
+                    const workspaceLocal = localStorage.getItem('workspace_data');
+                    if (workspaceLocal) {
+                        try {
+                            const data = JSON.parse(workspaceLocal);
+                            totalBhaktiPoints = data.bhaktiPoints || 0;
+                            currentStreak = data.streakDays || 0;
+                        } catch(e) {}
+                    }
+                }
+                
+                const level = SpiritualLevels && SpiritualLevels.getLevelForPoints ? SpiritualLevels.getLevelForPoints(totalBhaktiPoints) : { name: 'Shravana' };
+                
+                heroAuthSection.innerHTML = '<div class="hero-user-welcome"><div class="hero-user-avatar-large">' + (photoURL ? '<img src="' + photoURL + '" alt="' + displayName + '">' : '🙏') + '</div><div class="hero-user-greeting">Hare Krishna, <span class="name">' + (Sanitizer ? Sanitizer.escapeHTML(displayName) : displayName) + '</span>!</div><div class="hero-user-stats"><div class="hero-stat"><div class="hero-stat-value">' + totalBhaktiPoints + '</div><div class="hero-stat-label">Bhakti Points</div></div><div class="hero-stat"><div class="hero-stat-value">' + currentStreak + '</div><div class="hero-stat-label">Day Streak</div></div><div class="hero-stat"><div class="hero-stat-value">' + level.name + '</div><div class="hero-stat-label">Ashram Level</div></div></div></div>';
             } else {
                 heroAuthSection.innerHTML = '<button class="hero-auth-btn" onclick="Auth.openAuthModal()"><span>🔑 Begin Your Journey</span><small>Sign in to sync your spiritual progress</small></button>';
             }
@@ -1031,44 +1089,118 @@
             const user = FirebaseManager && FirebaseManager.getUser ? FirebaseManager.getUser() : null;
             
             if (user && typeof ModuleData !== 'undefined') {
-                const workspaceData = await ModuleData.get('workspace');
-                if (workspaceData) {
-                    const progress = Math.min(100, (workspaceData.bhaktiPoints || 0) / 10);
-                    updateModuleProgress('workspace', progress, (workspaceData.bhaktiPoints || 0) + ' pts');
-                }
+                // Load Workspace data
+                try {
+                    const workspaceData = await ModuleData.get('workspace');
+                    if (workspaceData) {
+                        const bhaktiPts = workspaceData.bhaktiPoints || 0;
+                        const progress = Math.min(100, bhaktiPts / 10);
+                        updateModuleProgress('workspace', progress, bhaktiPts + ' pts');
+                    }
+                } catch(e) { console.warn('Workspace load:', e); }
                 
-                const sadhanaData = await ModuleData.get('sadhana');
-                if (sadhanaData && sadhanaData.dailyLogs) {
-                    const days = Object.keys(sadhanaData.dailyLogs).length;
-                    const progress = Math.min(100, days * 3);
-                    updateModuleProgress('sadhana', progress, days + ' days');
-                }
+                // Load Sadhana data
+                try {
+                    const sadhanaData = await ModuleData.get('sadhana');
+                    if (sadhanaData && sadhanaData.dailyLogs) {
+                        const days = Object.keys(sadhanaData.dailyLogs).length;
+                        const progress = Math.min(100, days * 3);
+                        updateModuleProgress('sadhana', progress, days + ' days');
+                    }
+                } catch(e) { console.warn('Sadhana load:', e); }
                 
-                const gitaData = await ModuleData.get('gita');
-                if (gitaData) {
-                    const chapters = gitaData.chaptersCompleted || 0;
-                    const progress = Math.min(100, (chapters / 18) * 100);
-                    updateModuleProgress('gita', progress, chapters + '/18 ch');
-                }
-                
-                const labData = await ModuleData.get('lab');
-                if (labData && labData.testResults) {
-                    const tests = labData.testResults.length;
-                    const progress = Math.min(100, tests * 10);
-                    updateModuleProgress('lab', progress, tests + ' tests');
-                }
-            } else {
-                const sadhanaLocal = localStorage.getItem('sadhana_interactive_v5');
-                if (sadhanaLocal) {
-                    try {
-                        const data = JSON.parse(sadhanaLocal);
-                        if (data.dailyLogs) {
-                            const days = Object.keys(data.dailyLogs).length;
-                            const progress = Math.min(100, days * 3);
-                            updateModuleProgress('sadhana', progress, days + ' days');
+                // Load Gita data - check both stats and activity
+                try {
+                    const gitaData = await ModuleData.get('gita');
+                    if (gitaData) {
+                        // Try stats first (synced from dashboard)
+                        if (gitaData.stats) {
+                            const mins = gitaData.stats.totalMinutes || 0;
+                            const hours = (mins / 60).toFixed(1);
+                            const progress = Math.min(100, mins / 10);
+                            updateModuleProgress('gita', progress, hours + ' hrs');
+                        } 
+                        // Fallback to activity data
+                        else if (gitaData.activity && gitaData.activity.length > 0) {
+                            const totalMins = gitaData.activity.reduce((sum, a) => sum + (a.minutes || 0), 0);
+                            const hours = (totalMins / 60).toFixed(1);
+                            const progress = Math.min(100, totalMins / 10);
+                            updateModuleProgress('gita', progress, hours + ' hrs');
                         }
-                    } catch (e) {}
-                }
+                        // Check userProfile for points
+                        else if (gitaData.userProfile && gitaData.userProfile.points > 0) {
+                            const pts = gitaData.userProfile.points;
+                            const progress = Math.min(100, pts / 50);
+                            updateModuleProgress('gita', progress, pts + ' XP');
+                        }
+                    }
+                } catch(e) { console.warn('Gita load:', e); }
+                
+                // Load Lab data
+                try {
+                    const labData = await ModuleData.get('lab');
+                    if (labData && labData.testResults) {
+                        const tests = labData.testResults.length;
+                        const progress = Math.min(100, tests * 10);
+                        updateModuleProgress('lab', progress, tests + ' tests');
+                    }
+                } catch(e) { console.warn('Lab load:', e); }
+                
+            } else {
+                // Fallback to localStorage for all modules
+                loadLocalStorageProgress();
+            }
+        }
+        
+        function loadLocalStorageProgress() {
+            // Sadhana
+            const sadhanaLocal = localStorage.getItem('sadhana_interactive_v5');
+            if (sadhanaLocal) {
+                try {
+                    const data = JSON.parse(sadhanaLocal);
+                    if (data.dailyLogs) {
+                        const days = Object.keys(data.dailyLogs).length;
+                        const progress = Math.min(100, days * 3);
+                        updateModuleProgress('sadhana', progress, days + ' days');
+                    }
+                } catch (e) {}
+            }
+            
+            // Gita (localStorage keys)
+            const gitaProfile = localStorage.getItem('bg_user_profile');
+            const gitaActivity = localStorage.getItem('bg_user_activity');
+            if (gitaActivity) {
+                try {
+                    const activity = JSON.parse(gitaActivity);
+                    if (activity.length > 0) {
+                        const totalMins = activity.reduce((sum, a) => sum + (a.minutes || 0), 0);
+                        const hours = (totalMins / 60).toFixed(1);
+                        const progress = Math.min(100, totalMins / 10);
+                        updateModuleProgress('gita', progress, hours + ' hrs');
+                    }
+                } catch(e) {}
+            } else if (gitaProfile) {
+                try {
+                    const profile = JSON.parse(gitaProfile);
+                    if (profile.points > 0) {
+                        const pts = profile.points;
+                        const progress = Math.min(100, pts / 50);
+                        updateModuleProgress('gita', progress, pts + ' XP');
+                    }
+                } catch(e) {}
+            }
+            
+            // Workspace
+            const workspaceLocal = localStorage.getItem('workspace_data');
+            if (workspaceLocal) {
+                try {
+                    const data = JSON.parse(workspaceLocal);
+                    if (data.bhaktiPoints) {
+                        const pts = data.bhaktiPoints;
+                        const progress = Math.min(100, pts / 10);
+                        updateModuleProgress('workspace', progress, pts + ' pts');
+                    }
+                } catch(e) {}
             }
         }
 

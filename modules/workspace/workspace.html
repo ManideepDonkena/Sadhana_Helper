@@ -764,6 +764,29 @@
                     <textarea id="quickNectar" placeholder="What touched your heart today?" rows="3"></textarea>
                     <button onclick="saveQuickNectar()" class="btn-primary btn-sm">Save Nectar (+15 Bhakti)</button>
                 </div>
+                
+                <!-- Gita Progress Card -->
+                <div class="dashboard-card gita-progress-card" onclick="window.location.href='../gita/index.html'" style="cursor:pointer;">
+                    <div class="card-header">
+                        <h3>📚 Bhakti Shastri Progress</h3>
+                        <a href="../gita/dashboard.html" class="btn-link" style="margin:0;padding:0;" onclick="event.stopPropagation()">View →</a>
+                    </div>
+                    <div id="gitaProgressDisplay" style="display:flex; justify-content:space-around; text-align:center; padding:15px 0;">
+                        <div class="stat">
+                            <span id="gita-hours" style="color:#8b5cf6;">0h</span>
+                            <label>Listening</label>
+                        </div>
+                        <div class="stat">
+                            <span id="gita-xp" style="color:#8b5cf6;">0</span>
+                            <label>XP Earned</label>
+                        </div>
+                        <div class="stat">
+                            <span id="gita-streak" style="color:#8b5cf6;">0</span>
+                            <label>Streak</label>
+                        </div>
+                    </div>
+                    <p style="text-align:center; font-size:0.8rem; color:var(--text-dim); margin-top:5px;">Click to continue your Gita study →</p>
+                </div>
             </div>
         </div>
 

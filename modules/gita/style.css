@@ -632,6 +632,39 @@ select:focus {
     color: #374151;
 }
 
+/* Start Time Row - Shows lecture start point and restart button */
+.start-time-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 16px;
+    margin-bottom: 4px;
+    background: rgba(245, 158, 11, 0.05);
+    border-radius: 8px;
+}
+
+.start-time-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.begin-start-btn {
+    width: auto !important;
+    height: auto !important;
+    padding: 4px 10px !important;
+    font-size: 0.7rem !important;
+    gap: 4px;
+    background: rgba(245, 158, 11, 0.1) !important;
+    color: var(--accent-primary) !important;
+    border-radius: 6px !important;
+    font-weight: 500;
+}
+
+.begin-start-btn:hover {
+    background: rgba(245, 158, 11, 0.2) !important;
+}
+
 /* Player Controls - Compact Centered Row */
 .controls-row {
     display: flex;

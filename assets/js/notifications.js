@@ -77,7 +77,7 @@ const NotificationCenter = (function() {
      */
     function createUI() {
         // Check if bell already exists in the page (from HTML)
-        const existingBell = document.querySelector('.nav-notification-btn');
+        const existingBell = document.querySelector('.nav-notification-btn') || document.getElementById('nav-notification-btn');
         
         if (existingBell) {
             // Use the existing bell from the nav, don't create a new one

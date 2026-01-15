@@ -571,9 +571,9 @@ const NotificationService = {
     }
 };
 
-// Add toast styles dynamically
-const toastStyles = document.createElement('style');
-toastStyles.textContent = `
+// Add toast styles dynamically (scoped name to avoid conflicts)
+const kcNotificationToastStyles = document.createElement('style');
+kcNotificationToastStyles.textContent = `
     .kc-notification-toast {
         position: fixed;
         bottom: 20px;
@@ -656,7 +656,7 @@ toastStyles.textContent = `
         color: white;
     }
 `;
-document.head.appendChild(toastStyles);
+document.head.appendChild(kcNotificationToastStyles);
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {

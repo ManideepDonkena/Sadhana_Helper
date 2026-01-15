@@ -1,11 +1,23 @@
-import { userProfileStore, activityStore, prefsStore } from './storage.js';
+import { userProfileStore, activityStore, prefsStore, gitaFirebase } from './storage.js';
 import { gamification } from './gamification.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Wait for Firebase data to load first
+    await gitaFirebase.init();
+    
+    // Listen for data loaded event from Firebase
+    window.addEventListener('gitaDataLoaded', () => {
+        // Refresh dashboard with Firebase data
+        initDashboard();
+    });
+    
     initDashboard();
     initTheme();
     initAvatarSystem();
     initNameEditing();
+    
+    // Sync stats to Firebase periodically
+    syncStatsToFirebase();
 });
 
 function initTheme() {
@@ -200,4 +212,42 @@ function getRank(level) {
     if (level < 30) return 'Practitioner';
     if (level < 50) return 'Scholar';
     return 'Gita Master';
+}
+
+/**
+ * Sync Gita stats to main Firebase user profile
+ * This allows the main dashboard to display Gita progress
+ */
+async function syncStatsToFirebase() {
+    if (!gitaFirebase.isLoggedIn()) return;
+    
+    try {
+        const stats = gamification.getStats();
+        const activities = activityStore.get();
+        
+        // Calculate total listening time
+        const totalMinutes = activities.reduce((sum, a) => sum + (a.minutes || 0), 0);
+        
+        // Count unique chapters listened (from activity or favorites)
+        const chaptersSet = new Set();
+        activities.forEach(a => {
+            if (a.chapterId) chaptersSet.add(a.chapterId);
+        });
+        
+        // Sync summary to main gita module data
+        await gitaFirebase.setModuleData({
+            stats: {
+                totalPoints: stats.points,
+                totalMinutes: totalMinutes,
+                streak: stats.streak,
+                level: stats.level,
+                chaptersCompleted: chaptersSet.size,
+                lastUpdated: new Date().toISOString()
+            }
+        });
+        
+        console.log('📊 Gita stats synced to Firebase');
+    } catch (error) {
+        console.warn('Failed to sync stats:', error);
+    }
 }

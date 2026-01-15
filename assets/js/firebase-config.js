@@ -64,19 +64,18 @@ const FirebaseManager = {
             
             // Initialize services
             this.auth = firebase.auth();
-            this.db = firebase.firestore();
             
-            // Enable offline persistence
-            try {
-                await this.db.enablePersistence({ synchronizeTabs: true });
-                console.log('🔄 Firestore offline persistence enabled');
-            } catch (err) {
-                if (err.code === 'failed-precondition') {
-                    console.warn('Multiple tabs open, persistence only in one tab');
-                } else if (err.code === 'unimplemented') {
-                    console.warn('Browser does not support persistence');
-                }
-            }
+            // Configure Firestore with persistence settings (new method)
+            // This replaces the deprecated enablePersistence() method
+            this.db = firebase.firestore();
+            this.db.settings({
+                cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
+                merge: true
+            });
+            
+            // Note: With Firebase compat SDK, persistence is enabled by default
+            // The settings above configure cache behavior
+            console.log('🔄 Firestore configured with caching enabled');
             
             // Set up auth state listener
             this.auth.onAuthStateChanged((user) => {

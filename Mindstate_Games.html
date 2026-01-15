@@ -3,14 +3,557 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description"
         content="Mind State Laboratory - A suite of interactive diagnostic tools to analyze focus, impulse control, motor stability, and more.">
     <meta name="keywords"
         content="mind games, focus test, reaction time, meditation, grounding technique, anxiety relief">
     <title>Mind State Laboratory | Diagnostic Tools</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="assets/images/favicon.png">
+    
+    <style>
+        /* ===== BASE STYLES ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg: #0f0f1a;
+            --card-bg: rgba(30, 30, 50, 0.8);
+            --accent: #f59e0b;
+            --accent-dim: rgba(245, 158, 11, 0.2);
+            --text: #ffffff;
+            --text-dim: #888;
+            --border: rgba(255, 255, 255, 0.1);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        #app {
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        
+        /* ===== NAVIGATION ===== */
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-dim);
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .nav-back:hover {
+            color: var(--accent);
+            background: var(--accent-dim);
+        }
+        
+        /* ===== MENU SCREEN ===== */
+        #menu-screen {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+        
+        #menu-screen h1 {
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            text-align: center;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent), #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: var(--text-dim);
+            margin-bottom: 30px;
+            font-size: clamp(0.85rem, 2.5vw, 1rem);
+        }
+        
+        /* ===== GRID CONTAINER ===== */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 10px;
+        }
+        
+        @media (max-width: 640px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                padding: 5px;
+            }
+        }
+        
+        /* ===== TEST CARDS ===== */
+        .test-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .test-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 40px rgba(245, 158, 11, 0.15);
+        }
+        
+        .test-card:active {
+            transform: translateY(-2px);
+        }
+        
+        .test-card h3 {
+            color: var(--accent);
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .test-card p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        @media (max-width: 640px) {
+            .test-card {
+                padding: 20px;
+            }
+            
+            .test-card h3 {
+                font-size: 1.1rem;
+            }
+            
+            .test-card p {
+                font-size: 0.85rem;
+            }
+        }
+        
+        /* ===== GAME INTERFACE ===== */
+        #game-interface {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 100;
+            flex-direction: column;
+        }
+        
+        #game-interface.active {
+            display: flex;
+        }
+        
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        #hud-timer {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            font-family: 'Courier New', monospace;
+        }
+        
+        .btn-quit {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-quit:hover {
+            background: var(--danger);
+            color: white;
+        }
+        
+        #test-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #game-canvas-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        /* ===== RESULT MODAL ===== */
+        #result-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        #result-modal.active {
+            display: flex;
+        }
+        
+        .result-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            animation: popIn 0.3s ease;
+        }
+        
+        @keyframes popIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .score-big {
+            font-size: 4rem;
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+        
+        .score-label {
+            font-size: 1.5rem;
+            color: var(--text);
+            margin-bottom: 15px;
+        }
+        
+        .score-desc {
+            color: var(--text-dim);
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, var(--accent), #d97706);
+            border: none;
+            color: #000;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(245, 158, 11, 0.3);
+        }
+        
+        @media (max-width: 640px) {
+            .result-content {
+                padding: 30px 20px;
+            }
+            
+            .score-big {
+                font-size: 3rem;
+            }
+            
+            .score-label {
+                font-size: 1.2rem;
+            }
+        }
+        
+        /* ===== TEST SPECIFIC STYLES ===== */
+        
+        /* Focus Orb */
+        .orb {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, var(--accent), #d97706);
+            box-shadow: 0 0 60px rgba(245, 158, 11, 0.5);
+            position: absolute;
+            transition: transform 0.1s ease-out;
+        }
+        
+        @media (max-width: 640px) {
+            .orb {
+                width: 80px;
+                height: 80px;
+            }
+        }
+        
+        /* Zen Circle */
+        .zen-circle {
+            width: min(300px, 80vw);
+            height: min(300px, 80vw);
+            border: 4px dashed var(--text-dim);
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .trace-dot {
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 50%;
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 20px var(--accent);
+        }
+        
+        /* Impulse Test */
+        .impulse-box {
+            width: min(250px, 70vw);
+            height: min(250px, 70vw);
+            background: var(--card-bg);
+            border: 3px solid var(--border);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .impulse-box.danger {
+            border-color: var(--danger);
+            color: var(--danger);
+            animation: shake 0.3s;
+        }
+        
+        .impulse-box.success {
+            border-color: var(--success);
+            color: var(--success);
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        /* Steady Hand */
+        .steady-zone {
+            width: min(200px, 60vw);
+            height: min(200px, 60vw);
+            border: 2px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .steady-cursor {
+            width: 15px;
+            height: 15px;
+            background: var(--accent);
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 15px var(--accent);
+        }
+        
+        /* Breath Sync */
+        .breath-circle {
+            width: min(200px, 50vw);
+            height: min(200px, 50vw);
+            border: 4px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1rem, 4vw, 1.5rem);
+            transition: all 1s ease;
+        }
+        
+        .breath-circle.inhale {
+            transform: scale(1.3);
+            background: var(--accent-dim);
+        }
+        
+        .breath-circle.exhale {
+            transform: scale(0.8);
+        }
+        
+        /* Vigilance */
+        .vigilance-light {
+            width: min(150px, 40vw);
+            height: min(150px, 40vw);
+            border-radius: 50%;
+            background: #333;
+            border: 3px solid var(--border);
+            transition: all 0.1s;
+        }
+        
+        .vigilance-light.on {
+            background: var(--success);
+            box-shadow: 0 0 60px var(--success);
+        }
+        
+        .reaction-time {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            color: var(--text-dim);
+        }
+        
+        /* Grounding */
+        .grounding-container {
+            text-align: center;
+            padding: 20px;
+            max-width: 500px;
+        }
+        
+        .grounding-step {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+        
+        .grounding-instruction {
+            font-size: clamp(1rem, 3vw, 1.3rem);
+            color: var(--text-dim);
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .grounding-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .grounding-item {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .grounding-item:hover {
+            border-color: var(--accent);
+        }
+        
+        .grounding-item.selected {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+        
+        .grounding-progress {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        
+        .grounding-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            transition: width 0.3s;
+        }
+        
+        /* Instructions */
+        .test-instructions {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--text-dim);
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+            line-height: 1.6;
+            padding: 0 15px;
+        }
+        
+        /* Score display during test */
+        .live-score {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1rem;
+            color: var(--text-dim);
+        }
+        
+        /* Touch indicator for mobile */
+        .touch-indicator {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+        
+        @media (max-width: 768px) {
+            .touch-indicator {
+                display: block;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -28,36 +571,36 @@
 
         <!-- MENU SCREEN -->
         <div id="menu-screen">
-            <h1>Mind State Lab</h1>
+            <h1>🧠 Mind State Lab</h1>
             <p class="subtitle">Select a diagnostic tool to analyze your mental state</p>
 
             <div class="grid-container">
                 <div class="test-card" onclick="App.startTest('orb')">
-                    <h3>Focus Orb</h3>
-                    <p>Keep your mouse inside the moving orb. Measures Sustained Attention.</p>
+                    <h3>🔮 Focus Orb</h3>
+                    <p>Keep your finger/mouse inside the moving orb. Measures Sustained Attention.</p>
                 </div>
                 <div class="test-card" onclick="App.startTest('circle')">
-                    <h3>Zen Circle</h3>
+                    <h3>⭕ Zen Circle</h3>
                     <p>Trace the circle slowly and perfectly. Measures Motor Stability.</p>
                 </div>
                 <div class="test-card" onclick="App.startTest('impulse')">
-                    <h3>Don't Click</h3>
+                    <h3>🚫 Don't Click</h3>
                     <p>Resist the fake triggers. Measures Impulse Control.</p>
                 </div>
                 <div class="test-card" onclick="App.startTest('steady')">
-                    <h3>Microscope</h3>
+                    <h3>🔬 Microscope</h3>
                     <p>Hold your hand absolutely still. Measures Nervous Tension.</p>
                 </div>
                 <div class="test-card" onclick="App.startTest('breath')">
-                    <h3>Breath Sync</h3>
-                    <p>Match your keypresses to the rhythm. Measures Mind-Body Sync.</p>
+                    <h3>🌬️ Breath Sync</h3>
+                    <p>Match your taps to the rhythm. Measures Mind-Body Sync.</p>
                 </div>
                 <div class="test-card" onclick="App.startTest('vigilance')">
-                    <h3>Vigilance</h3>
+                    <h3>⚡ Vigilance</h3>
                     <p>React instantly when a light flashes. Measures Alertness.</p>
                 </div>
                 <div class="test-card" onclick="App.startTest('grounding')">
-                    <h3>Grounding</h3>
+                    <h3>🌿 Grounding</h3>
                     <p>5-4-3-2-1 Anxiety Relief Technique. Calms the mind.</p>
                 </div>
             </div>
@@ -67,7 +610,7 @@
         <div id="game-interface">
             <div class="hud">
                 <div id="hud-timer">30s</div>
-                <button class="btn-quit" onclick="App.returnToMenu()">Quit Test</button>
+                <button class="btn-quit" onclick="App.returnToMenu()">✕ Quit</button>
             </div>
 
             <!-- Dynamic Containers -->
@@ -87,7 +630,635 @@
 
     </div>
 
-    <script src="app.js" defer></script>
+    <script>
+        // ========== MIND STATE LAB - COMPLETE APP ==========
+        
+        const App = {
+            currentTest: null,
+            timer: null,
+            timeLeft: 30,
+            score: 0,
+            testData: {},
+            
+            // ===== MAIN FUNCTIONS =====
+            startTest(testId) {
+                this.currentTest = testId;
+                this.score = 0;
+                this.testData = {};
+                
+                document.getElementById('menu-screen').style.display = 'none';
+                document.getElementById('game-interface').classList.add('active');
+                document.getElementById('result-modal').classList.remove('active');
+                
+                // Initialize specific test
+                switch(testId) {
+                    case 'orb': this.initFocusOrb(); break;
+                    case 'circle': this.initZenCircle(); break;
+                    case 'impulse': this.initImpulse(); break;
+                    case 'steady': this.initSteadyHand(); break;
+                    case 'breath': this.initBreathSync(); break;
+                    case 'vigilance': this.initVigilance(); break;
+                    case 'grounding': this.initGrounding(); break;
+                }
+            },
+            
+            returnToMenu() {
+                this.stopTest();
+                document.getElementById('game-interface').classList.remove('active');
+                document.getElementById('result-modal').classList.remove('active');
+                document.getElementById('menu-screen').style.display = 'block';
+                document.getElementById('test-container').innerHTML = '';
+            },
+            
+            stopTest() {
+                if (this.timer) {
+                    clearInterval(this.timer);
+                    this.timer = null;
+                }
+                if (this.testData.animFrame) {
+                    cancelAnimationFrame(this.testData.animFrame);
+                }
+            },
+            
+            startTimer(duration, onComplete) {
+                this.timeLeft = duration;
+                this.updateTimerDisplay();
+                
+                this.timer = setInterval(() => {
+                    this.timeLeft--;
+                    this.updateTimerDisplay();
+                    
+                    if (this.timeLeft <= 0) {
+                        clearInterval(this.timer);
+                        if (onComplete) onComplete();
+                    }
+                }, 1000);
+            },
+            
+            updateTimerDisplay() {
+                document.getElementById('hud-timer').textContent = `${this.timeLeft}s`;
+            },
+            
+            showResult(score, title, desc) {
+                this.stopTest();
+                document.getElementById('game-interface').classList.remove('active');
+                document.getElementById('res-score').textContent = `${Math.round(score)}%`;
+                document.getElementById('res-title').textContent = title;
+                document.getElementById('res-desc').textContent = desc;
+                document.getElementById('result-modal').classList.add('active');
+            },
+            
+            // ===== FOCUS ORB TEST =====
+            initFocusOrb() {
+                const container = document.getElementById('test-container');
+                container.innerHTML = `
+                    <p class="test-instructions">Keep your finger/cursor inside the moving orb!</p>
+                    <div class="live-score">Score: <span id="orb-score">0</span></div>
+                    <div class="orb" id="focus-orb"></div>
+                    <div class="touch-indicator">Touch and hold the orb</div>
+                `;
+                
+                const orb = document.getElementById('focus-orb');
+                const rect = container.getBoundingClientRect();
+                let orbX = rect.width / 2 - 60;
+                let orbY = rect.height / 2 - 60;
+                let velX = 2, velY = 1.5;
+                let isInside = false;
+                let totalTime = 0;
+                let insideTime = 0;
+                
+                // Position orb
+                orb.style.left = orbX + 'px';
+                orb.style.top = orbY + 'px';
+                
+                const isMobile = 'ontouchstart' in window;
+                let pointerX = 0, pointerY = 0;
+                
+                const updatePointer = (e) => {
+                    const touch = e.touches ? e.touches[0] : e;
+                    pointerX = touch.clientX - rect.left;
+                    pointerY = touch.clientY - rect.top;
+                };
+                
+                container.addEventListener(isMobile ? 'touchmove' : 'mousemove', updatePointer);
+                container.addEventListener(isMobile ? 'touchstart' : 'mouseenter', updatePointer);
+                
+                const animate = () => {
+                    // Move orb
+                    orbX += velX;
+                    orbY += velY;
+                    
+                    const orbSize = isMobile ? 80 : 120;
+                    
+                    // Bounce off walls
+                    if (orbX <= 0 || orbX >= rect.width - orbSize) velX *= -1;
+                    if (orbY <= 0 || orbY >= rect.height - orbSize - 60) velY *= -1;
+                    
+                    orb.style.left = orbX + 'px';
+                    orb.style.top = orbY + 'px';
+                    
+                    // Check if pointer is inside orb
+                    const orbCenterX = orbX + orbSize/2;
+                    const orbCenterY = orbY + orbSize/2;
+                    const dist = Math.sqrt((pointerX - orbCenterX)**2 + (pointerY - orbCenterY)**2);
+                    
+                    isInside = dist < orbSize/2;
+                    orb.style.boxShadow = isInside ? 
+                        '0 0 80px rgba(16, 185, 129, 0.8)' : 
+                        '0 0 60px rgba(245, 158, 11, 0.5)';
+                    
+                    totalTime++;
+                    if (isInside) insideTime++;
+                    
+                    document.getElementById('orb-score').textContent = Math.round((insideTime/totalTime) * 100);
+                    
+                    this.testData.animFrame = requestAnimationFrame(animate);
+                };
+                
+                animate();
+                
+                this.startTimer(30, () => {
+                    const score = (insideTime / totalTime) * 100;
+                    let title, desc;
+                    
+                    if (score >= 80) {
+                        title = "Laser Focus! 🎯";
+                        desc = "Excellent sustained attention. Your mind is sharp and present.";
+                    } else if (score >= 60) {
+                        title = "Good Focus 👍";
+                        desc = "Decent attention span with minor lapses. Keep practicing!";
+                    } else {
+                        title = "Scattered Mind 💭";
+                        desc = "Your attention wandered frequently. Try meditation to improve.";
+                    }
+                    
+                    this.showResult(score, title, desc);
+                });
+            },
+            
+            // ===== ZEN CIRCLE TEST =====
+            initZenCircle() {
+                const container = document.getElementById('test-container');
+                container.innerHTML = `
+                    <p class="test-instructions">Trace the circle slowly with your finger/mouse</p>
+                    <div class="zen-circle" id="zen-circle">
+                        <div class="trace-dot" id="trace-dot"></div>
+                    </div>
+                    <div class="touch-indicator">Drag around the circle</div>
+                `;
+                
+                const circle = document.getElementById('zen-circle');
+                const dot = document.getElementById('trace-dot');
+                const rect = circle.getBoundingClientRect();
+                const radius = rect.width / 2;
+                let angle = -Math.PI / 2;
+                let deviations = 0;
+                let totalPoints = 0;
+                
+                const isMobile = 'ontouchstart' in window;
+                
+                const onMove = (e) => {
+                    e.preventDefault();
+                    const touch = e.touches ? e.touches[0] : e;
+                    const circleRect = circle.getBoundingClientRect();
+                    const centerX = circleRect.left + radius;
+                    const centerY = circleRect.top + radius;
+                    
+                    const dx = touch.clientX - centerX;
+                    const dy = touch.clientY - centerY;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    
+                    // Check if near the circle edge
+                    const deviation = Math.abs(dist - radius);
+                    totalPoints++;
+                    if (deviation > 30) deviations++;
+                    
+                    // Update dot position
+                    angle = Math.atan2(dy, dx);
+                    const dotX = radius + Math.cos(angle) * radius - 10;
+                    const dotY = radius + Math.sin(angle) * radius - 10;
+                    dot.style.left = dotX + 'px';
+                    dot.style.top = dotY + 'px';
+                    dot.style.transform = 'none';
+                };
+                
+                circle.addEventListener(isMobile ? 'touchmove' : 'mousemove', onMove, { passive: false });
+                
+                this.startTimer(20, () => {
+                    const accuracy = totalPoints > 0 ? ((totalPoints - deviations) / totalPoints) * 100 : 0;
+                    let title, desc;
+                    
+                    if (accuracy >= 85) {
+                        title = "Steady Hands 🙏";
+                        desc = "Excellent motor control. Very smooth and precise movements.";
+                    } else if (accuracy >= 65) {
+                        title = "Good Control 👌";
+                        desc = "Decent stability with some shakiness. Deep breaths help!";
+                    } else {
+                        title = "Needs Steadying 🌊";
+                        desc = "Your hands showed tremors. Try relaxation exercises.";
+                    }
+                    
+                    this.showResult(accuracy, title, desc);
+                });
+            },
+            
+            // ===== IMPULSE CONTROL TEST =====
+            initImpulse() {
+                const container = document.getElementById('test-container');
+                container.innerHTML = `
+                    <p class="test-instructions">Only tap when it turns GREEN. Resist red and orange!</p>
+                    <div class="impulse-box" id="impulse-box">Wait...</div>
+                    <div class="live-score">Mistakes: <span id="impulse-mistakes">0</span></div>
+                `;
+                
+                const box = document.getElementById('impulse-box');
+                let mistakes = 0;
+                let successes = 0;
+                let isGreen = false;
+                let rounds = 0;
+                const maxRounds = 10;
+                
+                const fakeTexts = ["CLICK NOW!", "TAP!", "GO!", "PRESS!", "NOW!"];
+                
+                const showPrompt = () => {
+                    if (rounds >= maxRounds) {
+                        endTest();
+                        return;
+                    }
+                    
+                    rounds++;
+                    const isReal = Math.random() > 0.6; // 40% are fake
+                    
+                    if (isReal) {
+                        isGreen = true;
+                        box.style.borderColor = '#10b981';
+                        box.style.color = '#10b981';
+                        box.textContent = '✓ TAP NOW!';
+                        
+                        setTimeout(() => {
+                            if (isGreen) {
+                                isGreen = false;
+                                box.style.borderColor = '';
+                                box.style.color = '';
+                                box.textContent = 'Too slow!';
+                                setTimeout(showPrompt, 1000);
+                            }
+                        }, 1500);
+                    } else {
+                        isGreen = false;
+                        box.style.borderColor = Math.random() > 0.5 ? '#ef4444' : '#f59e0b';
+                        box.style.color = box.style.borderColor;
+                        box.textContent = fakeTexts[Math.floor(Math.random() * fakeTexts.length)];
+                        
+                        setTimeout(() => {
+                            box.style.borderColor = '';
+                            box.style.color = '';
+                            box.textContent = 'Wait...';
+                            setTimeout(showPrompt, 500 + Math.random() * 1500);
+                        }, 1000);
+                    }
+                };
+                
+                box.onclick = () => {
+                    if (isGreen) {
+                        successes++;
+                        isGreen = false;
+                        box.classList.add('success');
+                        box.textContent = 'Great!';
+                        setTimeout(() => {
+                            box.classList.remove('success');
+                            box.textContent = 'Wait...';
+                            setTimeout(showPrompt, 500 + Math.random() * 1000);
+                        }, 500);
+                    } else {
+                        mistakes++;
+                        document.getElementById('impulse-mistakes').textContent = mistakes;
+                        box.classList.add('danger');
+                        setTimeout(() => box.classList.remove('danger'), 300);
+                    }
+                };
+                
+                const endTest = () => {
+                    const score = Math.max(0, 100 - (mistakes * 15));
+                    let title, desc;
+                    
+                    if (mistakes <= 1) {
+                        title = "Iron Will 💪";
+                        desc = "Excellent impulse control! You resisted temptation well.";
+                    } else if (mistakes <= 3) {
+                        title = "Good Restraint 🙂";
+                        desc = "Minor slips but generally good control.";
+                    } else {
+                        title = "Impulsive 🔥";
+                        desc = "You clicked too eagerly. Practice patience and mindfulness.";
+                    }
+                    
+                    this.showResult(score, title, desc);
+                };
+                
+                setTimeout(showPrompt, 1500);
+                this.testData.endTest = endTest;
+            },
+            
+            // ===== STEADY HAND TEST =====
+            initSteadyHand() {
+                const container = document.getElementById('test-container');
+                container.innerHTML = `
+                    <p class="test-instructions">Keep the dot perfectly still in the center</p>
+                    <div class="steady-zone" id="steady-zone">
+                        <div class="steady-cursor" id="steady-cursor"></div>
+                    </div>
+                    <div class="live-score">Steadiness: <span id="steady-score">100</span>%</div>
+                    <div class="touch-indicator">Hold your finger still</div>
+                `;
+                
+                const zone = document.getElementById('steady-zone');
+                const cursor = document.getElementById('steady-cursor');
+                const rect = zone.getBoundingClientRect();
+                const centerX = rect.width / 2 - 7.5;
+                const centerY = rect.height / 2 - 7.5;
+                
+                cursor.style.left = centerX + 'px';
+                cursor.style.top = centerY + 'px';
+                
+                let totalDeviation = 0;
+                let samples = 0;
+                
+                const isMobile = 'ontouchstart' in window;
+                
+                const onMove = (e) => {
+                    const touch = e.touches ? e.touches[0] : e;
+                    const zoneRect = zone.getBoundingClientRect();
+                    
+                    const x = touch.clientX - zoneRect.left - 7.5;
+                    const y = touch.clientY - zoneRect.top - 7.5;
+                    
+                    cursor.style.left = Math.max(0, Math.min(rect.width - 15, x)) + 'px';
+                    cursor.style.top = Math.max(0, Math.min(rect.height - 15, y)) + 'px';
+                    
+                    const dx = x - centerX;
+                    const dy = y - centerY;
+                    const deviation = Math.sqrt(dx*dx + dy*dy);
+                    
+                    totalDeviation += deviation;
+                    samples++;
+                    
+                    const steadiness = Math.max(0, 100 - (totalDeviation / samples));
+                    document.getElementById('steady-score').textContent = Math.round(steadiness);
+                };
+                
+                zone.addEventListener(isMobile ? 'touchmove' : 'mousemove', onMove);
+                
+                this.startTimer(15, () => {
+                    const avgDeviation = samples > 0 ? totalDeviation / samples : 0;
+                    const score = Math.max(0, 100 - avgDeviation * 2);
+                    let title, desc;
+                    
+                    if (score >= 80) {
+                        title = "Rock Steady 🪨";
+                        desc = "Minimal tremor detected. Your nervous system is calm.";
+                    } else if (score >= 50) {
+                        title = "Slight Tremor 〰️";
+                        desc = "Some nervous tension present. Try deep breathing.";
+                    } else {
+                        title = "Shaky 😰";
+                        desc = "Significant tremor detected. Stress or caffeine may be factors.";
+                    }
+                    
+                    this.showResult(score, title, desc);
+                });
+            },
+            
+            // ===== BREATH SYNC TEST =====
+            initBreathSync() {
+                const container = document.getElementById('test-container');
+                container.innerHTML = `
+                    <p class="test-instructions">Tap/click during INHALE, release during EXHALE</p>
+                    <div class="breath-circle" id="breath-circle">Inhale</div>
+                    <div class="live-score">Sync: <span id="breath-score">0</span>%</div>
+                    <div class="touch-indicator">Hold during inhale, release during exhale</div>
+                `;
+                
+                const circle = document.getElementById('breath-circle');
+                let phase = 'inhale';
+                let isHolding = false;
+                let correctTime = 0;
+                let totalTime = 0;
+                let phaseTimer = null;
+                
+                const breathCycle = () => {
+                    phase = 'inhale';
+                    circle.textContent = 'INHALE';
+                    circle.classList.add('inhale');
+                    circle.classList.remove('exhale');
+                    
+                    setTimeout(() => {
+                        phase = 'exhale';
+                        circle.textContent = 'EXHALE';
+                        circle.classList.remove('inhale');
+                        circle.classList.add('exhale');
+                        
+                        setTimeout(breathCycle, 4000);
+                    }, 4000);
+                };
+                
+                const checkSync = () => {
+                    totalTime++;
+                    if ((phase === 'inhale' && isHolding) || (phase === 'exhale' && !isHolding)) {
+                        correctTime++;
+                    }
+                    document.getElementById('breath-score').textContent = 
+                        Math.round((correctTime / totalTime) * 100);
+                };
+                
+                const isMobile = 'ontouchstart' in window;
+                
+                const onDown = () => { isHolding = true; };
+                const onUp = () => { isHolding = false; };
+                
+                document.addEventListener(isMobile ? 'touchstart' : 'mousedown', onDown);
+                document.addEventListener(isMobile ? 'touchend' : 'mouseup', onUp);
+                
+                this.testData.cleanup = () => {
+                    document.removeEventListener(isMobile ? 'touchstart' : 'mousedown', onDown);
+                    document.removeEventListener(isMobile ? 'touchend' : 'mouseup', onUp);
+                };
+                
+                breathCycle();
+                phaseTimer = setInterval(checkSync, 100);
+                this.testData.phaseTimer = phaseTimer;
+                
+                this.startTimer(32, () => {
+                    clearInterval(phaseTimer);
+                    if (this.testData.cleanup) this.testData.cleanup();
+                    
+                    const score = (correctTime / totalTime) * 100;
+                    let title, desc;
+                    
+                    if (score >= 75) {
+                        title = "In Sync 🧘";
+                        desc = "Excellent mind-body connection. Your breath awareness is strong.";
+                    } else if (score >= 50) {
+                        title = "Moderate Sync 🌀";
+                        desc = "Decent rhythm but some disconnection. Practice pranayama.";
+                    } else {
+                        title = "Out of Sync 🌊";
+                        desc = "Mind and body seem disconnected. Daily breathwork will help.";
+                    }
+                    
+                    this.showResult(score, title, desc);
+                });
+            },
+            
+            // ===== VIGILANCE TEST =====
+            initVigilance() {
+                const container = document.getElementById('test-container');
+                container.innerHTML = `
+                    <p class="test-instructions">Tap as fast as possible when the light turns GREEN!</p>
+                    <div class="vigilance-light" id="vig-light"></div>
+                    <div class="reaction-time" id="reaction-display">Get ready...</div>
+                    <div class="touch-indicator">Tap anywhere when green</div>
+                `;
+                
+                const light = document.getElementById('vig-light');
+                const display = document.getElementById('reaction-display');
+                let reactionTimes = [];
+                let lightOn = false;
+                let lightTime = 0;
+                let rounds = 0;
+                const maxRounds = 5;
+                
+                const isMobile = 'ontouchstart' in window;
+                
+                const flashLight = () => {
+                    if (rounds >= maxRounds) {
+                        endTest();
+                        return;
+                    }
+                    
+                    display.textContent = 'Wait for green...';
+                    
+                    setTimeout(() => {
+                        lightOn = true;
+                        lightTime = Date.now();
+                        light.classList.add('on');
+                        display.textContent = 'TAP NOW!';
+                    }, 1500 + Math.random() * 3000);
+                };
+                
+                const onTap = () => {
+                    if (lightOn) {
+                        const reaction = Date.now() - lightTime;
+                        reactionTimes.push(reaction);
+                        rounds++;
+                        
+                        lightOn = false;
+                        light.classList.remove('on');
+                        display.textContent = `${reaction}ms - ${rounds}/${maxRounds}`;
+                        
+                        if (rounds < maxRounds) {
+                            setTimeout(flashLight, 1000);
+                        } else {
+                            setTimeout(endTest, 500);
+                        }
+                    }
+                };
+                
+                document.addEventListener(isMobile ? 'touchstart' : 'click', onTap);
+                this.testData.cleanup = () => {
+                    document.removeEventListener(isMobile ? 'touchstart' : 'click', onTap);
+                };
+                
+                const endTest = () => {
+                    if (this.testData.cleanup) this.testData.cleanup();
+                    
+                    const avg = reactionTimes.reduce((a,b) => a+b, 0) / reactionTimes.length;
+                    const score = Math.max(0, Math.min(100, 100 - (avg - 200) / 5));
+                    let title, desc;
+                    
+                    if (avg < 300) {
+                        title = "Lightning Fast ⚡";
+                        desc = `Average: ${Math.round(avg)}ms. Your reflexes are razor sharp!`;
+                    } else if (avg < 500) {
+                        title = "Quick Reflexes 👍";
+                        desc = `Average: ${Math.round(avg)}ms. Good alertness level.`;
+                    } else {
+                        title = "Slow Response 🐢";
+                        desc = `Average: ${Math.round(avg)}ms. Your mind seems foggy. Get more rest!`;
+                    }
+                    
+                    this.showResult(score, title, desc);
+                };
+                
+                this.testData.endTest = endTest;
+                setTimeout(flashLight, 1000);
+            },
+            
+            // ===== GROUNDING TECHNIQUE =====
+            initGrounding() {
+                const container = document.getElementById('test-container');
+                const steps = [
+                    { num: 5, sense: 'SEE', items: ['Computer', 'Wall', 'Light', 'Window', 'Plant', 'Chair', 'Phone', 'Book'] },
+                    { num: 4, sense: 'TOUCH', items: ['Keyboard', 'Table', 'Chair', 'Clothes', 'Phone', 'Floor', 'Hair', 'Skin'] },
+                    { num: 3, sense: 'HEAR', items: ['Breathing', 'Fan', 'Traffic', 'Birds', 'Music', 'Silence', 'Typing', 'AC'] },
+                    { num: 2, sense: 'SMELL', items: ['Air', 'Coffee', 'Food', 'Perfume', 'Nothing', 'Paper', 'Nature', 'Soap'] },
+                    { num: 1, sense: 'TASTE', items: ['Saliva', 'Water', 'Coffee', 'Mint', 'Food', 'Nothing', 'Tea', 'Gum'] }
+                ];
+                
+                let currentStep = 0;
+                let selectedCount = 0;
+                
+                const renderStep = () => {
+                    const step = steps[currentStep];
+                    container.innerHTML = `
+                        <div class="grounding-container">
+                            <div class="grounding-step">${step.num} things you can ${step.sense}</div>
+                            <div class="grounding-instruction">Select ${step.num} things around you</div>
+                            <div class="grounding-items" id="grounding-items">
+                                ${step.items.map(item => `
+                                    <div class="grounding-item" onclick="App.selectGroundingItem(this)">${item}</div>
+                                `).join('')}
+                            </div>
+                            <div class="grounding-progress">
+                                <div class="grounding-progress-fill" style="width: ${(currentStep / steps.length) * 100}%"></div>
+                            </div>
+                        </div>
+                    `;
+                    selectedCount = 0;
+                };
+                
+                this.selectGroundingItem = (el) => {
+                    if (el.classList.contains('selected')) {
+                        el.classList.remove('selected');
+                        selectedCount--;
+                    } else {
+                        el.classList.add('selected');
+                        selectedCount++;
+                        
+                        const step = steps[currentStep];
+                        if (selectedCount >= step.num) {
+                            currentStep++;
+                            if (currentStep < steps.length) {
+                                setTimeout(renderStep, 500);
+                            } else {
+                                // Completed
+                                this.showResult(100, "Grounded 🌿", 
+                                    "You've completed the 5-4-3-2-1 grounding technique. Your mind should feel calmer and more present.");
+                            }
+                        }
+                    }
+                };
+                
+                renderStep();
+            }
+        };
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Mind State Lab loaded');
+        });
+    </script>
 </body>
 
 </html>

@@ -5,29 +5,42 @@
  */
 
 // ========== FIREBASE CONFIGURATION ==========
-// Correct Firebase config - shared across all modules
-const firebaseConfig = {
-    apiKey: "AIzaSyB9vdSNAUN4903GJWBJJoIIEhqSEOjajnw",
-    authDomain: "my-website-11127.firebaseapp.com",
-    projectId: "my-website-11127",
-    storageBucket: "my-website-11127.firebasestorage.app",
-    messagingSenderId: "766689827734",
-    appId: "1:766689827734:web:7011801e380debecb5dbb7",
-    measurementId: "G-0DEELR4DW0"
-};
+// Using shared FirebaseManager from firebase-config.js
+// (firebaseConfig is already defined in ../../assets/js/firebase-config.js)
 
 // Initialize Firebase (check if already initialized)
 let auth = null;
 let db = null;
 
-function initFirebase() {
+async function initFirebase() {
     try {
+        // Use FirebaseManager if available (from firebase-config.js)
+        if (typeof FirebaseManager !== 'undefined') {
+            const result = await FirebaseManager.init();
+            if (result) {
+                auth = result.auth;
+                db = result.db;
+                return true;
+            }
+        }
+        
+        // Fallback: direct initialization if FirebaseManager not available
         if (typeof firebase === 'undefined') {
             console.warn('Firebase SDK not loaded yet');
             return false;
         }
         if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
+            // Use existing firebaseConfig from firebase-config.js or define locally
+            const config = typeof firebaseConfig !== 'undefined' ? firebaseConfig : {
+                apiKey: "AIzaSyB9vdSNAUN4903GJWBJJoIIEhqSEOjajnw",
+                authDomain: "my-website-11127.firebaseapp.com",
+                projectId: "my-website-11127",
+                storageBucket: "my-website-11127.firebasestorage.app",
+                messagingSenderId: "766689827734",
+                appId: "1:766689827734:web:7011801e380debecb5dbb7",
+                measurementId: "G-0DEELR4DW0"
+            };
+            firebase.initializeApp(config);
         }
         auth = firebase.auth();
         db = firebase.firestore();
@@ -73,10 +86,10 @@ let chartInstance = null;
 let isDataLoading = true;
 
 // ========== INITIALIZATION ==========
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Retry Firebase init if not done
     if (!auth || !db) {
-        initFirebase();
+        await initFirebase();
     }
     
     // Setup auth listener if Firebase is ready
@@ -185,6 +198,7 @@ async function initializeWorkspace() {
         renderDashboard();
         renderMoodChart();
         renderFocusHistory();
+        loadGitaProgress();
         
         isDataLoading = false;
         
@@ -620,6 +634,78 @@ function showDayDetail(dateKey) {
 
 function closeDayModal() {
     document.getElementById('day-modal').classList.remove('active');
+}
+
+// ========== GITA PROGRESS ==========
+async function loadGitaProgress() {
+    // Display elements
+    const hoursEl = document.getElementById('gita-hours');
+    const xpEl = document.getElementById('gita-xp');
+    const streakEl = document.getElementById('gita-streak');
+    
+    if (!hoursEl || !xpEl || !streakEl) return;
+    
+    let totalMinutes = 0;
+    let totalXP = 0;
+    let streak = 0;
+    
+    // Try loading from Firebase first
+    if (db && currentUser) {
+        try {
+            const gitaDoc = await db.collection('users').doc(currentUser.uid)
+                                    .collection('modules').doc('gita').get();
+            
+            if (gitaDoc.exists) {
+                const data = gitaDoc.data();
+                
+                // Check stats object (synced from Gita dashboard)
+                if (data.stats) {
+                    totalMinutes = data.stats.totalMinutes || 0;
+                    totalXP = data.stats.totalPoints || 0;
+                    streak = data.stats.streak || 0;
+                }
+                // Fallback to activity array
+                else if (data.activity && data.activity.length > 0) {
+                    totalMinutes = data.activity.reduce((sum, a) => sum + (a.minutes || 0), 0);
+                    totalXP = data.activity.reduce((sum, a) => sum + (a.points || 0), 0);
+                }
+                // Fallback to userProfile
+                else if (data.userProfile) {
+                    totalXP = data.userProfile.points || 0;
+                    streak = data.userProfile.streak || 0;
+                }
+            }
+        } catch(e) {
+            console.warn('Failed to load Gita progress from Firebase:', e);
+        }
+    }
+    
+    // Fallback to localStorage if no Firebase data
+    if (totalXP === 0 && totalMinutes === 0) {
+        try {
+            const activityStr = localStorage.getItem('bg_user_activity');
+            const profileStr = localStorage.getItem('bg_user_profile');
+            
+            if (activityStr) {
+                const activity = JSON.parse(activityStr);
+                totalMinutes = activity.reduce((sum, a) => sum + (a.minutes || 0), 0);
+                totalXP = activity.reduce((sum, a) => sum + (a.points || 0), 0);
+            }
+            if (profileStr) {
+                const profile = JSON.parse(profileStr);
+                if (!totalXP) totalXP = profile.points || 0;
+                streak = profile.streak || 0;
+            }
+        } catch(e) {
+            console.warn('Failed to load Gita progress from localStorage:', e);
+        }
+    }
+    
+    // Update display
+    const hours = (totalMinutes / 60).toFixed(1);
+    hoursEl.textContent = hours + 'h';
+    xpEl.textContent = totalXP;
+    streakEl.textContent = streak;
 }
 
 // ========== QUICK STATS ==========

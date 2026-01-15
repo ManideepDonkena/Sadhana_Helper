@@ -6,6 +6,9 @@ import { TranscriptView } from './transcript.js';
 import { Tutorial } from './tutorial.js';
 import { gamification } from './gamification.js';
 
+// Store original start times from JSON (never overwritten by user)
+const originalStartsMap = {};
+
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const els = {
@@ -24,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playerCollapseBtn: document.getElementById('player-collapse-btn'),
         nowTitle: document.getElementById('now-title'),
         startTimeLabel: document.getElementById('start-time-label'),
+        beginFromStartBtn: document.getElementById('begin-from-start-btn'),
         progressArea: document.getElementById('progress-area'),
         progressRail: document.getElementById('progress-rail'),
         progressFill: document.getElementById('progress-fill'),
@@ -127,9 +131,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Core Logic ---
 
+    // Get the original start time from JSON (never changes)
+    function getOriginalStart(item) {
+        const key = itemKey(item);
+        return originalStartsMap[key] || 0;
+    }
+
+    // Get the effective start time (user custom if set, otherwise original from JSON)
     function getStartFor(item) {
-        const t = customStartsStore.get()[itemKey(item)];
-        return (typeof t === 'number' && t >= 0) ? t : 0;
+        const key = itemKey(item);
+        const customStart = customStartsStore.get()[key];
+        // If user has set a custom start, use it; otherwise use original JSON start_time
+        if (typeof customStart === 'number' && customStart >= 0) {
+            return customStart;
+        }
+        return originalStartsMap[key] || 0;
+    }
+
+    // Reset to original JSON start time (clears user's custom position)
+    function resetToOriginalStart() {
+        const item = state.allItems[state.currentIndex];
+        if (!item) return;
+        const key = itemKey(item);
+        const originalStart = getOriginalStart(item);
+        
+        // Clear the saved resume position for this item
+        lastListenedStore.set({ key, url: els.audioPlayer.currentSrc, time: originalStart, meta: { title: item.title, day: item.day } });
+        
+        // Seek to original start
+        seekTo(originalStart);
+        
+        // Update UI
+        if (els.startTimeLabel) {
+            els.startTimeLabel.textContent = `Start: ${formatTime(originalStart)}`;
+        }
     }
 
     function toggleFavorite(item) {
@@ -162,7 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function seekTo(seconds) {
-        const s = Math.max(0, Math.min(seconds, (els.audioPlayer.duration || 0) - 0.5));
+        // Get the minimum seek position (original start time from JSON)
+        const item = state.allItems[state.currentIndex];
+        const minSeek = item ? getOriginalStart(item) : 0;
+        // Ensure we never seek before the lecture start time
+        const s = Math.max(minSeek, Math.min(seconds, (els.audioPlayer.duration || 0) - 0.5));
         try { els.audioPlayer.currentTime = s; } catch { }
     }
 
@@ -186,14 +225,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = item.cloudinary_matches[0].cloudinary_url;
         els.audioPlayer.src = url;
 
-        const start = getStartFor(item);
+        const originalStart = getOriginalStart(item);
+        const effectiveStart = getStartFor(item);
         const savedResume = lastListenedStore.get();
         let resumeTime = 0;
         if (savedResume && savedResume.key === itemKey(item)) {
             resumeTime = Number(savedResume.time) || 0;
         }
 
-        const desiredSeek = Math.max(start || 0, resumeTime);
+        // Always ensure we start at or after the original start time (never before the lecture begins)
+        const desiredSeek = Math.max(originalStart, resumeTime);
 
         const onLoaded = () => {
             if (desiredSeek > 0) seekTo(desiredSeek);
@@ -222,7 +263,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (els.playerSection) els.playerSection.classList.remove('hidden');
 
         updatePlayerFavBtn(item);
-        if (els.startTimeLabel) els.startTimeLabel.textContent = `Start at: ${formatTime(start)}`;
+        if (els.startTimeLabel) els.startTimeLabel.textContent = `Start: ${formatTime(originalStart)}`;
+        
+        // Connect to Notification Center Media Player
+        connectToNotificationPlayer(item);
 
         // Render markers/notes when ready
         const renderWhenReady = () => {
@@ -362,8 +406,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!item || !data.url) return;
 
         els.audioPlayer.src = data.url;
-        const start = getStartFor(item);
-        const seek = Math.max(Number(data.time) || 0, start || 0);
+        const originalStart = getOriginalStart(item);
+        // Always seek to at least the original start time (never before lecture begins)
+        const seek = Math.max(Number(data.time) || 0, originalStart);
 
         const onLoaded = () => {
             try { els.audioPlayer.currentTime = seek; } catch { }
@@ -376,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (els.playerSection) els.playerSection.classList.remove('hidden');
         updatePlayerFavBtn(item);
         state.currentIndex = state.allItems.indexOf(item);
-        if (els.startTimeLabel) els.startTimeLabel.textContent = `Start at: ${formatTime(start)}`;
+        if (els.startTimeLabel) els.startTimeLabel.textContent = `Start: ${formatTime(originalStart)}`;
 
         // Wait for user to hit play, but show markers
         const renderWhenReady = () => {
@@ -392,6 +437,138 @@ document.addEventListener('DOMContentLoaded', () => {
         // Load transcript
         if (item.day) {
             transcriptView.load(item.day);
+        }
+    }
+
+    /**
+     * Setup Media Session API for OS-level media controls
+     * This shows playback controls in:
+     * - Windows: System media overlay (media keys, Win+G)
+     * - macOS: Control Center / Now Playing
+     * - Android: Lock screen & notification shade
+     * - iOS: Control Center & lock screen
+     */
+    function setupMediaSession(item) {
+        if (!('mediaSession' in navigator)) {
+            console.warn('Media Session API not supported');
+            return;
+        }
+
+        // Set track metadata - this shows in OS notifications
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: item.title || 'Bhakti Shastri Lecture',
+            artist: item.speaker || 'H.G. Lila Purushottam Das',
+            album: `Chapter ${item.chapter || '?'} - Day ${item.day || '?'}`,
+            artwork: [
+                { src: 'https://res.cloudinary.com/krishnakathamritam/image/upload/v1700000000/bhakti-shastri-cover.jpg', sizes: '512x512', type: 'image/jpeg' },
+                { src: '../../assets/images/favicon.png', sizes: '96x96', type: 'image/png' }
+            ]
+        });
+
+        // Set playback state
+        navigator.mediaSession.playbackState = 'playing';
+
+        // Handle OS media control actions
+        navigator.mediaSession.setActionHandler('play', () => {
+            els.audioPlayer.play().catch(() => {});
+        });
+
+        navigator.mediaSession.setActionHandler('pause', () => {
+            els.audioPlayer.pause();
+        });
+
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+            playPrev();
+        });
+
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+            playNext();
+        });
+
+        navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+            const skipTime = details.seekOffset || 10;
+            seekTo(els.audioPlayer.currentTime - skipTime);
+        });
+
+        navigator.mediaSession.setActionHandler('seekforward', (details) => {
+            const skipTime = details.seekOffset || 10;
+            seekTo(els.audioPlayer.currentTime + skipTime);
+        });
+
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+            if (details.seekTime !== undefined) {
+                const item = state.allItems[state.currentIndex];
+                const minSeek = item ? getOriginalStart(item) : 0;
+                els.audioPlayer.currentTime = Math.max(minSeek, details.seekTime);
+            }
+        });
+
+        navigator.mediaSession.setActionHandler('stop', () => {
+            els.audioPlayer.pause();
+            els.audioPlayer.currentTime = 0;
+        });
+
+        console.log('Media Session API initialized - controls should appear in OS notification center');
+    }
+
+    /**
+     * Update Media Session position state (progress bar in OS controls)
+     */
+    function updateMediaSessionPosition() {
+        if (!('mediaSession' in navigator) || !els.audioPlayer.duration) return;
+
+        try {
+            navigator.mediaSession.setPositionState({
+                duration: els.audioPlayer.duration,
+                playbackRate: els.audioPlayer.playbackRate,
+                position: els.audioPlayer.currentTime
+            });
+        } catch (e) {
+            // Some browsers don't support setPositionState
+        }
+    }
+
+    /**
+     * Connect audio player to Notification Center's media widget
+     * This enables OS-level media controls and the mini-player in notifications
+     */
+    function connectToNotificationPlayer(item) {
+        // Setup OS-level Media Session API directly
+        setupMediaSession(item);
+        
+        // Also connect to our custom notification panel if available
+        if (typeof NotificationCenter !== 'undefined' && NotificationCenter.connectAudio) {
+            NotificationCenter.connectAudio(els.audioPlayer, {
+                title: item.title || 'Untitled',
+                artist: item.speaker || 'Bhakti Shastri',
+                album: `Chapter ${item.chapter || ''} - Day ${item.day || ''}`,
+                artwork: null
+            });
+        }
+    }
+    
+    /**
+     * Play previous track in the filtered list
+     */
+    function playPrev() {
+        if (!state.filteredItems.length) return;
+        const currentItem = state.allItems[state.currentIndex];
+        if (!currentItem && state.filteredItems.length) { 
+            tryPlay(state.filteredItems.length - 1); 
+            return; 
+        }
+
+        const idxInFiltered = state.filteredItems.indexOf(currentItem);
+        let prevIdx = idxInFiltered > 0 ? idxInFiltered - 1 : state.filteredItems.length - 1;
+
+        // Find previous playable
+        for (let i = 0; i < state.filteredItems.length; i++) {
+            const candidate = state.filteredItems[prevIdx];
+            if (hasPlayableUrl(candidate)) { 
+                tryPlay(prevIdx); 
+                break; 
+            }
+            prevIdx = prevIdx > 0 ? prevIdx - 1 : state.filteredItems.length - 1;
         }
     }
 
@@ -445,11 +622,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!els.progressFill || !els.currentTime || !els.durationTime) return;
         const dur = els.audioPlayer.duration || 0;
         const cur = els.audioPlayer.currentTime || 0;
-        const pct = dur ? Math.min(100, (cur / dur) * 100) : 0;
+        
+        // Get the original start time for relative display
+        const item = state.allItems[state.currentIndex];
+        const originalStart = item ? getOriginalStart(item) : 0;
+        
+        // Calculate effective duration (from start_time to end)
+        const effectiveDuration = Math.max(0, dur - originalStart);
+        // Calculate relative current position (how far into the lecture we are)
+        const relativeCurrent = Math.max(0, cur - originalStart);
+        
+        // Progress is relative to the lecture portion only
+        const pct = effectiveDuration > 0 ? Math.min(100, (relativeCurrent / effectiveDuration) * 100) : 0;
 
         els.progressFill.style.width = `${pct}%`;
-        els.currentTime.textContent = formatTime(cur);
-        els.durationTime.textContent = formatTime(dur);
+        // Show relative time (time into the lecture, not raw file time)
+        els.currentTime.textContent = formatTime(relativeCurrent);
+        els.durationTime.textContent = formatTime(effectiveDuration);
         els.progressArea?.setAttribute('aria-valuenow', String(Math.round(pct)));
     }
 
@@ -534,8 +723,19 @@ document.addEventListener('DOMContentLoaded', () => {
         togglePlay();
     });
 
-    els.audioPlayer.addEventListener('play', () => { if (els.btnPlay) els.btnPlay.textContent = '⏸'; });
-    els.audioPlayer.addEventListener('pause', () => { if (els.btnPlay) els.btnPlay.textContent = '▶'; });
+    // Update UI and Media Session on play/pause
+    els.audioPlayer.addEventListener('play', () => { 
+        if (els.btnPlay) els.btnPlay.textContent = '⏸';
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = 'playing';
+        }
+    });
+    els.audioPlayer.addEventListener('pause', () => { 
+        if (els.btnPlay) els.btnPlay.textContent = '▶';
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = 'paused';
+        }
+    });
     els.audioPlayer.addEventListener('ended', () => {
         saveLastListened({ time: 0 });
         playNext();
@@ -544,9 +744,19 @@ document.addEventListener('DOMContentLoaded', () => {
         saveLastListened();
         updateProgressUI();
         updateActiveNoteHighlight();
+        // Update OS media controls progress bar
+        updateMediaSessionPosition();
     });
 
     els.btnNext?.addEventListener('click', playNext);
+    els.btnPrev?.addEventListener('click', playPrev);
+    
+    // Listen for Notification Center media actions (prev/next from OS controls)
+    window.addEventListener('nc-media-action', (e) => {
+        const action = e.detail?.action;
+        if (action === 'next') playNext();
+        else if (action === 'prev') playPrev();
+    });
 
     els.btnBack20?.addEventListener('click', () => seekTo((els.audioPlayer.currentTime || 0) - 20));
     els.btnForward20?.addEventListener('click', () => seekTo((els.audioPlayer.currentTime || 0) + 20));
@@ -639,6 +849,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Markers
     els.addMarkerBtn?.addEventListener('click', addMarker);
+
+    // Begin from Start button - resets to original JSON start_time
+    els.beginFromStartBtn?.addEventListener('click', resetToOriginalStart);
 
     // Progress Bar Interaction
     els.progressRail?.addEventListener('click', (e) => {
@@ -736,20 +949,15 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(res => res.ok ? res.json() : [])
         .then(data => {
             state.allItems = Array.isArray(data) ? data.filter(x => x && (x.title || x.filename)) : [];
-            // Seed custom starts
-            const startsMap = customStartsStore.get();
+            
+            // Store original start times from JSON into our separate map (never overwritten by user)
             for (const it of state.allItems) {
                 if (typeof it.start_time === 'number' && it.start_time >= 0) {
-                    startsMap[itemKey(it)] = Math.floor(it.start_time);
+                    originalStartsMap[itemKey(it)] = Math.floor(it.start_time);
                 }
             }
-            // (Don't save back to store, just use in memory or only save if user edits? 
-            // Original code just added them to the map. Let's keep it in memory mostly, but original code didn't save explicitly unless user set one)
-            // Wait, original code: `customStarts[itemKey(it)] = ...` then later `saveStarts()` only called on user button click. 
-            // So we can just update the store default values? No, that overwrites user prefs.
-            // Let's just merge: use saved if exists, else use file value.
-            // Actually original code overwrites `customStarts` on load loop. 
-            // Better behavior: Check if key exists in store, if not use file value.
+            
+            // Note: customStartsStore is for user-modified positions, separate from originalStartsMap
 
 
             // Interactive & Random Roaming Background Icons
@@ -801,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
 
-            // Audio Seeking Logic (Click AND Drag)
+            // Audio Seeking Logic (Click AND Drag) - relative to start_time
             if (els.progressArea) {
                 let isDragging = false;
 
@@ -810,8 +1018,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
                     const pct = x / rect.width;
                     const dur = els.audioPlayer.duration;
-                    if (dur) {
-                        els.audioPlayer.currentTime = pct * dur;
+                    
+                    // Get original start time to calculate relative seeking
+                    const item = state.allItems[state.currentIndex];
+                    const originalStart = item ? getOriginalStart(item) : 0;
+                    const effectiveDuration = dur - originalStart;
+                    
+                    if (dur && effectiveDuration > 0) {
+                        // Seek is relative to start_time, so add originalStart offset
+                        els.audioPlayer.currentTime = originalStart + (pct * effectiveDuration);
                         updateProgressUI();
                     }
                 };
